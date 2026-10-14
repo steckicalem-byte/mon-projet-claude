@@ -4,8 +4,9 @@ import { ArrowLeft, Pencil, SearchX, Star } from 'lucide-react';
 import { useData } from '@/context/DataContext';
 import { usePrefs } from '@/context/PrefsContext';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { FormChips, ProbBar, TeamCrest } from '@/components/match/parts';
+import { ProbBar, TeamCrest } from '@/components/match/parts';
 import { AiAnalysisCard } from '@/components/match/AiAnalysisCard';
+import { AutoAnalysisCard, HeadToHeadCard, SeasonStatsCard } from '@/components/match/StatsAnalysis';
 import { BookmarkButton } from '@/components/user/BookmarkButton';
 import { BookmarkEditor } from '@/components/user/BookmarkEditor';
 import { CategoryPill } from '@/components/user/CategoryPill';
@@ -17,7 +18,7 @@ import { COMPETITIONS } from '@/lib/competitions';
 import { bookmarkId } from '@/lib/user/types';
 import { bookmakerMargin, expectedValue, fairOdds, kelly } from '@/lib/model/betting';
 import type { Prediction } from '@/lib/model/poisson';
-import { dayLabel, euros, num, parseOdds, pct, shortDate, teamForm, timeLabel } from '@/lib/format';
+import { dayLabel, euros, num, parseOdds, pct, timeLabel } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import type { Match, Odds } from '@/types';
 
@@ -200,7 +201,7 @@ function MyTracking({ match, competition, p }: { match: Match; competition: stri
 export function MatchPage() {
   const { id } = useParams();
   const [params] = useSearchParams();
-  const { dataset, loading, predictMatch } = useData();
+  const { dataset, loading, predictMatch, model } = useData();
   const { preferences, updatePreferences } = usePrefs();
   const wanted = params.get('c');
   const validWanted = wanted && COMPETITIONS.some((c) => c.code === wanted) ? wanted : null;
@@ -226,9 +227,6 @@ export function MatchPage() {
     );
   }
 
-  const formHome = teamForm(dataset.matches, match.home.id, match.utcDate);
-  const formAway = teamForm(dataset.matches, match.away.id, match.utcDate);
-  const label = (f: (typeof formHome)[number]) => `${shortDate(f.match.utcDate)} ${f.match.home.shortName} ${f.match.score!.home}-${f.match.score!.away} ${f.match.away.shortName}`;
 
   return (
     <>
@@ -273,6 +271,8 @@ export function MatchPage() {
       </header>
 
       <div className="grid gap-5 lg:grid-cols-2">
+        {model && <AutoAnalysisCard dataset={dataset} match={match} p={p} model={model} />}
+
         <AiAnalysisCard dataset={dataset} match={match} model={p} />
 
         <Section title="Marchés">
@@ -315,25 +315,15 @@ export function MatchPage() {
 
         <OddsComparator match={match} p={p} />
 
-        <Section title="Forme (5 derniers matchs)" className="lg:col-span-2">
-          <dl className="grid gap-3 sm:grid-cols-2">
-            {[
-              { team: match.home, form: formHome },
-              { team: match.away, form: formAway },
-            ].map(({ team, form }) => (
-              <div key={team.id} className="flex items-center justify-between gap-3 rounded-xl bg-elevated/60 px-3 py-2.5">
-                <dt className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                  <TeamCrest team={team} size="sm" />
-                  <span className="truncate">{team.shortName}</span>
-                </dt>
-                <dd><FormChips form={form.map((f) => ({ result: f.result, label: label(f) }))} /></dd>
-              </div>
-            ))}
-          </dl>
-          <p className="mt-4 text-xs text-muted">
-            Méthode : modèle de Poisson (Dixon-Coles) estimé sur {dataset.matches.filter((m) => m.score).length} matchs des deux dernières saisons,
-            les plus récents pesant davantage (demi-vie de 6 mois). Il ne connaît ni les blessures, ni les suspensions, ni la motivation :
-            croisez toujours avec l'actualité.
+        <SeasonStatsCard dataset={dataset} match={match} />
+
+        <HeadToHeadCard dataset={dataset} match={match} />
+
+        <Section title="Méthode">
+          <p className="text-sm text-muted">
+            Modèle de Poisson (Dixon-Coles) estimé sur {dataset.matches.filter((m) => m.score).length} matchs des deux dernières saisons de la compétition,
+            les plus récents pesant davantage (demi-vie de 6 mois). Il ne connaît ni les blessures, ni les suspensions, ni la motivation : croisez
+            toujours avec l'actualité. Les probabilités ne sont jamais des garanties de gain.
           </p>
         </Section>
       </div>
