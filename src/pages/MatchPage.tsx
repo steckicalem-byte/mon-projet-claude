@@ -5,6 +5,7 @@ import { useData } from '@/context/DataContext';
 import { usePrefs } from '@/context/PrefsContext';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FormChips, ProbBar, TeamCrest } from '@/components/match/parts';
+import { AiAnalysisCard } from '@/components/match/AiAnalysisCard';
 import { bookmakerMargin, expectedValue, fairOdds, kelly } from '@/lib/model/betting';
 import type { Prediction } from '@/lib/model/poisson';
 import { dayLabel, euros, num, parseOdds, pct, shortDate, teamForm, timeLabel } from '@/lib/format';
@@ -204,6 +205,8 @@ export function MatchPage() {
       </header>
 
       <div className="grid gap-5 lg:grid-cols-2">
+        <AiAnalysisCard dataset={dataset} match={match} model={p} />
+
         <Section title="Marchés">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted">

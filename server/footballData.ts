@@ -11,8 +11,11 @@
 
 const UPSTREAM = 'https://api.football-data.org/v4';
 
-/** Compétitions disponibles dans l'offre gratuite de football-data.org. */
-export const ALLOWED_COMPETITIONS = ['CL', 'FL1', 'PL', 'PD', 'SA', 'BL1', 'DED', 'PPL', 'ELC', 'BSA'] as const;
+/**
+ * Compétitions proposées. Toutes sont dans l'offre gratuite de football-data.org,
+ * sauf la Ligue Europa (EL) qui demande une offre payante.
+ */
+export const ALLOWED_COMPETITIONS = ['CL', 'EL', 'FL1', 'PL', 'PD', 'SA', 'BL1', 'DED', 'PPL', 'ELC', 'BSA'] as const;
 
 export interface ProxyResult {
   status: number;
@@ -56,6 +59,9 @@ export async function proxyFootballData(url: URL, apiKey: string | undefined): P
       if (parsed.message) message = parsed.message;
     } catch {
       /* corps non JSON */
+    }
+    if (res.status === 403) {
+      message = `Votre offre football-data.org ne donne pas accès à cette compétition (${competition}). La Ligue Europa, notamment, n'est pas dans l'offre gratuite.`;
     }
     return json(res.status, { error: 'UPSTREAM_ERROR', message });
   }

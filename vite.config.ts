@@ -2,12 +2,16 @@ import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 import { proxyFootballData } from './server/footballData';
+import { analyseMatch } from './server/analysis';
 
-/** Sert `/api/football` en local (`npm run dev` / `npm run preview`), comme la fonction Vercel. */
-function footballApi(apiKey: string | undefined): Plugin {
+/** Sert `/api/football` et `/api/analyse` en local (`npm run dev` / `npm run preview`), comme les fonctions Vercel. */
+function footballApi(footballKey: string | undefined, anthropicKey: string | undefined): Plugin {
   const handler = async (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse, next: () => void) => {
-    if (!req.url?.startsWith('/api/football')) return next();
-    const result = await proxyFootballData(new URL(req.url, 'http://localhost'), apiKey);
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    let result;
+    if (url.pathname === '/api/football') result = await proxyFootballData(url, footballKey);
+    else if (url.pathname === '/api/analyse') result = await analyseMatch(url, footballKey, anthropicKey);
+    else return next();
     res.writeHead(result.status, result.headers);
     res.end(result.body);
   };
@@ -21,7 +25,7 @@ function footballApi(apiKey: string | undefined): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    plugins: [react(), footballApi(env.FOOTBALL_DATA_API_KEY)],
+    plugins: [react(), footballApi(env.FOOTBALL_DATA_API_KEY, env.ANTHROPIC_API_KEY)],
     resolve: {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },

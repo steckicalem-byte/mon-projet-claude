@@ -1,8 +1,9 @@
 import type { Competition } from '@/types';
 
-/** Championnats de l'offre gratuite de football-data.org (doit correspondre à `server/footballData.ts`). */
+/** Compétitions proposées (doit correspondre à `server/footballData.ts`). La Ligue Europa demande une offre football-data.org payante. */
 export const COMPETITIONS: Competition[] = [
   { code: 'CL', name: 'Ligue des champions', country: 'Europe' },
+  { code: 'EL', name: 'Ligue Europa', country: 'Europe' },
   { code: 'FL1', name: 'Ligue 1', country: 'France' },
   { code: 'PL', name: 'Premier League', country: 'Angleterre' },
   { code: 'PD', name: 'LaLiga', country: 'Espagne' },
