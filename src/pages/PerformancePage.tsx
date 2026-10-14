@@ -4,7 +4,8 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { useData } from '@/context/DataContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataNotice, DataToolbar, LoadingCards } from '@/components/match/parts';
-import { runBacktest, type BacktestSummary } from '@/lib/model/backtest';
+import type { BacktestSummary } from '@/lib/model/backtest';
+import BacktestWorker from '@/lib/model/backtest.worker?worker&inline';
 import { OUTCOME_LABEL, num, pct, shortDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
 
@@ -29,9 +30,14 @@ export function PerformancePage() {
   useEffect(() => {
     setSummary(null);
     if (!dataset) return;
-    // Calcul différé pour laisser la page s'afficher d'abord.
-    const t = window.setTimeout(() => setSummary(runBacktest(dataset.matches)), 30);
-    return () => window.clearTimeout(t);
+    // Évaluation dans un Web Worker : la page reste réactive pendant le calcul.
+    const worker = new BacktestWorker();
+    worker.onmessage = (e: MessageEvent<BacktestSummary>) => {
+      setSummary(e.data);
+      worker.terminate();
+    };
+    worker.postMessage(dataset.matches);
+    return () => worker.terminate();
   }, [dataset]);
 
   const calibration = summary?.calibration.map((c) => ({ ...c, predicted: c.predicted * 100, observed: c.observed * 100 })) ?? [];

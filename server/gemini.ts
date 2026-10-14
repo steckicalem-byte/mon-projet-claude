@@ -35,7 +35,7 @@ interface GeminiResponse {
 }
 
 /** Extrait et valide l'objet JSON de la réponse (tolère du texte ou des ``` autour). */
-function parsePrediction(text: string): SubmitInput | null {
+export function parsePrediction(text: string): SubmitInput | null {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
   if (start < 0 || end <= start) return null;

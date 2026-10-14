@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
@@ -26,6 +27,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     plugins: [react(), footballApi(env.FOOTBALL_DATA_API_KEY, { anthropic: env.ANTHROPIC_API_KEY, gemini: env.GEMINI_API_KEY })],
+    test: { include: ['src/**/*.test.ts', 'server/**/*.test.ts'] },
     resolve: {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },
