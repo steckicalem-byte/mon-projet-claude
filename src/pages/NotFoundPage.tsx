@@ -7,8 +7,8 @@ export function NotFoundPage() {
     <EmptyState
       icon={Compass}
       title="Page introuvable"
-      description="Cette page n'existe pas ou a été déplacée."
-      action={<Link to="/" className="font-medium text-brand-400 hover:underline">Retour au tableau de bord</Link>}
+      description="Cette adresse ne correspond à aucune page."
+      action={<Link to="/" className="font-medium text-brand-500 hover:underline">Retour aux pronostics</Link>}
     />
   );
 }

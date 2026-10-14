@@ -1,11 +1,10 @@
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { Moon, Sun } from 'lucide-react';
 import { useEffect } from 'react';
-import { NAV_ITEMS, SETTINGS_ITEM, type NavItem } from './nav';
+import { NAV_ITEMS, type NavItem } from './nav';
 import { Logo } from './Logo';
 import { cn } from '@/lib/cn';
-import { useStore } from '@/context/StoreContext';
-import { useDeadlineReminders } from '@/lib/useDeadlineReminders';
+import { usePrefs } from '@/context/PrefsContext';
 
 function SideLink({ item }: { item: NavItem }) {
   const Icon = item.icon;
@@ -33,7 +32,7 @@ function SideLink({ item }: { item: NavItem }) {
 }
 
 function ThemeToggle({ className }: { className?: string }) {
-  const { preferences, updatePreferences } = useStore();
+  const { preferences, updatePreferences } = usePrefs();
   const dark = preferences.theme === 'dark';
   return (
     <button
@@ -48,25 +47,8 @@ function ThemeToggle({ className }: { className?: string }) {
   );
 }
 
-function Avatar() {
-  const { preferences } = useStore();
-  const initials = (preferences.studentName.trim() || 'É')
-    .split(/\s+/)
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-  return (
-    <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-electric-500 text-xs font-bold text-white" aria-hidden>
-      {initials}
-    </span>
-  );
-}
-
 export function Layout() {
-  const { preferences } = useStore();
   const location = useLocation();
-  useDeadlineReminders();
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -88,33 +70,22 @@ export function Layout() {
 
       {/* Barre latérale (ordinateur) */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-line bg-surface/70 px-4 py-5 backdrop-blur-xl lg:flex">
-        <Link to="/" className="mb-8 rounded-xl px-2" aria-label="StudyMate AI — accueil">
+        <Link to="/" className="mb-8 rounded-xl px-2" aria-label="PronoFoot — accueil">
           <Logo />
         </Link>
         <nav aria-label="Navigation principale" className="flex flex-1 flex-col gap-1">
           {NAV_ITEMS.map((item) => <SideLink key={item.to} item={item} />)}
         </nav>
-        <div className="mt-4 border-t border-line pt-4">
-          <SideLink item={SETTINGS_ITEM} />
-          <div className="mt-3 flex items-center justify-between px-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <Avatar />
-              <span className="truncate text-sm font-medium">{preferences.studentName || 'Étudiant'}</span>
-            </div>
-            <ThemeToggle />
-          </div>
+        <div className="mt-4 flex items-center justify-between border-t border-line px-2 pt-4">
+          <span className="text-xs text-muted">Jouer comporte des risques</span>
+          <ThemeToggle />
         </div>
       </aside>
 
       {/* Barre supérieure (mobile/tablette) */}
       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-line bg-bg/80 px-4 py-3 backdrop-blur-xl lg:hidden">
-        <Link to="/" aria-label="StudyMate AI — accueil"><Logo /></Link>
-        <div className="flex items-center gap-1">
-          <ThemeToggle />
-          <Link to={SETTINGS_ITEM.to} className="rounded-full p-1 transition hover:ring-2 hover:ring-brand-500/40" aria-label="Profil et paramètres">
-            <Avatar />
-          </Link>
-        </div>
+        <Link to="/" aria-label="PronoFoot — accueil"><Logo /></Link>
+        <ThemeToggle />
       </header>
 
       <main id="main" tabIndex={-1} className="px-4 pb-28 pt-6 outline-none focus-visible:ring-0 focus-visible:ring-offset-0 sm:px-6 lg:ml-64 lg:px-10 lg:pb-12 lg:pt-10">
@@ -128,7 +99,7 @@ export function Layout() {
         aria-label="Navigation principale"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
       >
-        <ul className="mx-auto grid max-w-lg grid-cols-5">
+        <ul className="mx-auto grid max-w-lg grid-cols-4">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
