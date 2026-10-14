@@ -45,7 +45,7 @@ export function TeamsPage() {
   }, [dataset, model]);
 
   const chart = rows.map((r) => ({ name: r.team.tla, full: r.team.name, x: r.rating.xgFor, y: r.rating.xgAgainst }));
-  const avg = chart.length ? chart.reduce((s, c) => s + c.x, 0) / chart.length : 1.3;
+  const mean = (key: 'x' | 'y') => (chart.length ? chart.reduce((s, c) => s + c[key], 0) / chart.length : 1.3);
 
   return (
     <>
@@ -102,8 +102,8 @@ export function TeamsPage() {
                     label={{ value: 'Buts marqués →', position: 'insideBottom', offset: -10, fill: 'rgb(var(--muted))', fontSize: 12 }} />
                   <YAxis type="number" dataKey="y" name="Encaissés" reversed domain={['auto', 'auto']} tickFormatter={(v: number) => num(v, 1)} stroke="rgb(var(--muted))" fontSize={12}
                     label={{ value: '← Buts encaissés', angle: -90, position: 'insideLeft', offset: 15, fill: 'rgb(var(--muted))', fontSize: 12 }} />
-                  <ReferenceLine x={avg} stroke="rgb(var(--muted))" strokeOpacity={0.4} />
-                  <ReferenceLine y={avg} stroke="rgb(var(--muted))" strokeOpacity={0.4} />
+                  <ReferenceLine x={mean('x')} stroke="rgb(var(--muted))" strokeOpacity={0.4} />
+                  <ReferenceLine y={mean('y')} stroke="rgb(var(--muted))" strokeOpacity={0.4} />
                   <Tooltip
                     cursor={false}
                     content={({ payload }) => {
