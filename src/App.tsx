@@ -1,4 +1,7 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Route, Routes } from 'react-router-dom';
+
+// En mode fichier unique (aperçu hébergé sans serveur), les routes passent par le # de l'URL.
+const Router = import.meta.env.MODE === 'artifact' ? HashRouter : BrowserRouter;
 import { StoreProvider } from '@/context/StoreContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { Layout } from '@/components/layout/Layout';
@@ -12,7 +15,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 
 export default function App() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ToastProvider>
         <StoreProvider>
           <Routes>
@@ -28,6 +31,6 @@ export default function App() {
           </Routes>
         </StoreProvider>
       </ToastProvider>
-    </BrowserRouter>
+    </Router>
   );
 }

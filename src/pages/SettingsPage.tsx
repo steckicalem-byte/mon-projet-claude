@@ -193,7 +193,9 @@ export function SettingsPage() {
             <div className="flex justify-between gap-4"><dt className="text-muted">Assistant IA</dt><dd>{aiProvider.isDemo ? 'Mode démonstration' : 'Connecté'}</dd></div>
           </dl>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={doExport}><Download className="h-4 w-4" aria-hidden />Exporter</Button>
+            {import.meta.env.MODE !== 'artifact' && (
+              <Button variant="secondary" onClick={doExport}><Download className="h-4 w-4" aria-hidden />Exporter</Button>
+            )}
             <Button variant="secondary" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" aria-hidden />Importer</Button>
             <input
               ref={fileRef}
@@ -210,6 +212,9 @@ export function SettingsPage() {
               <Trash2 className="h-4 w-4" aria-hidden />Tout effacer
             </Button>
           </div>
+          {import.meta.env.MODE === 'artifact' && (
+            <p className="mt-3 text-xs text-muted">L'export n'est pas disponible dans cet aperçu en ligne (téléchargements bloqués). Il fonctionne dans la version publiée sur Vercel ou Netlify.</p>
+          )}
         </Section>
       </div>
 
@@ -220,7 +225,7 @@ export function SettingsPage() {
         confirmLabel="Tout effacer"
         onConfirm={() => {
           clearAll();
-          window.location.assign('/');
+          window.location.reload();
         }}
         onCancel={() => setConfirmReset(false)}
       />
