@@ -13,6 +13,10 @@ interface ApiTeam {
   tla?: string | null;
   crest?: string | null;
 }
+interface ApiScore {
+  home: number | null;
+  away: number | null;
+}
 interface ApiMatch {
   id: number;
   utcDate: string;
@@ -21,7 +25,11 @@ interface ApiMatch {
   season: { startDate: string };
   homeTeam: ApiTeam;
   awayTeam: ApiTeam;
-  score: { fullTime: { home: number | null; away: number | null } };
+  score: {
+    duration?: 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT';
+    fullTime: ApiScore;
+    regularTime?: ApiScore;
+  };
 }
 interface ApiResponse {
   matches: ApiMatch[];
@@ -44,7 +52,8 @@ function team(t: ApiTeam): Team {
 export function normalizeMatch(m: ApiMatch): Match | null {
   // Matchs sans équipes définies (ex. barrages à venir) : inutilisables.
   if (!m.homeTeam?.id || !m.awayTeam?.id) return null;
-  const ft = m.score?.fullTime;
+  // Après prolongation ou tirs au but, fullTime inclut ces buts : le modèle (et les paris 1N2) portent sur les 90 minutes.
+  const ft = m.score?.duration && m.score.duration !== 'REGULAR' && m.score.regularTime ? m.score.regularTime : m.score?.fullTime;
   return {
     id: m.id,
     utcDate: m.utcDate,

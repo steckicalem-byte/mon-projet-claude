@@ -12,7 +12,7 @@
 const UPSTREAM = 'https://api.football-data.org/v4';
 
 /** Compétitions disponibles dans l'offre gratuite de football-data.org. */
-export const ALLOWED_COMPETITIONS = ['FL1', 'PL', 'PD', 'SA', 'BL1', 'DED', 'PPL', 'ELC', 'BSA'] as const;
+export const ALLOWED_COMPETITIONS = ['CL', 'FL1', 'PL', 'PD', 'SA', 'BL1', 'DED', 'PPL', 'ELC', 'BSA'] as const;
 
 export interface ProxyResult {
   status: number;

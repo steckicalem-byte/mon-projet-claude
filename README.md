@@ -11,7 +11,7 @@ Application web de **pronostics de football** : pour chaque match à venir, elle
 
 | Page | Contenu |
 | --- | --- |
-| **Pronostics** | Matchs des deux prochaines semaines, groupés par jour : barre de probabilités 1/N/2, score le plus probable, +2,5 buts, « les deux équipes marquent », badge **Value** si une cote saisie est intéressante. Choix du championnat (Ligue 1, Premier League, LaLiga, Serie A, Bundesliga, Eredivisie, Primeira Liga, Championship, Brasileirão). |
+| **Pronostics** | Matchs des deux prochaines semaines, groupés par jour : barre de probabilités 1/N/2, score le plus probable, +2,5 buts, « les deux équipes marquent », badge **Value** si une cote saisie est intéressante. Choix du championnat (Ligue des champions, Ligue 1, Premier League, LaLiga, Serie A, Bundesliga, Eredivisie, Primeira Liga, Championship, Brasileirão). |
 | **Détail d'un match** | Buts attendus, tous les marchés (1N2, double chance, plus/moins 1,5 / 2,5 / 3,5, BTTS) avec leur **cote juste**, grille de probabilité de chaque score, forme des 5 derniers matchs. **Comparateur de cotes** : marge du bookmaker, espérance de gain et mise conseillée (critère de Kelly fractionné). |
 | **Équipes** | Classement de la saison, forme, forces offensive et défensive estimées, graphique attaque/défense. |
 | **Performance** | Backtest honnête : chaque match passé est prédit **uniquement avec les matchs joués avant lui**. Taux de bon 1N2, score de Brier, log-loss, comparés à une référence naïve, courbe de calibration et 20 derniers pronostics. |
@@ -72,6 +72,7 @@ src/
 
 ## Limites
 
-- Uniquement les championnats nationaux de l'offre gratuite (pas de coupes : le modèle suppose que les équipes s'affrontent dans la même ligue).
+- **Ligue des champions** : le modèle n'apprend que sur les matchs de Ligue des champions (saison en cours et précédente), car ce sont les seuls où des clubs de championnats différents s'affrontent. Il dispose donc de moins de matchs par équipe qu'en championnat ; les scores après prolongation ou tirs au but sont ramenés au score du temps réglementaire.
+- Les autres coupes (coupes nationales, Ligue Europa…) ne sont pas dans l'offre gratuite de football-data.org.
 - Pas de récupération automatique des cotes : il faut les saisir (les API de cotes sont payantes).
 - En tout début de saison, ou si la saison précédente n'est pas accessible, les pronostics sont moins fiables.
