@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: 246 246 251;
+    --surface: 255 255 255;
+    --elevated: 240 240 247;
+    --line: 226 226 236;
+    --fg: 17 17 27;
+    --muted: 100 100 120;
+    color-scheme: light;
+  }
+  .dark {
+    --bg: 7 7 12;
+    --surface: 17 17 27;
+    --elevated: 26 26 38;
+    --line: 40 40 56;
+    --fg: 236 236 245;
+    --muted: 148 148 170;
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-bg text-fg font-sans antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-bg;
+  }
+  ::selection {
+    @apply bg-brand-500/30;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+  .card-hover {
+    @apply transition duration-200 hover:-translate-y-0.5 hover:border-brand-500/40 hover:shadow-glow;
+  }
+  .field {
+    @apply w-full rounded-xl border border-line bg-elevated/60 px-3.5 py-2.5 text-sm text-fg placeholder:text-muted/70
+      transition focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500/30;
+  }
+  .field-error {
+    @apply border-red-500/70 focus:border-red-500 focus:ring-red-500/30;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-fg;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-r from-brand-400 to-electric-400 bg-clip-text text-transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
