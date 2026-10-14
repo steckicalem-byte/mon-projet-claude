@@ -31,3 +31,17 @@ export function parseOdds(s: string): number | undefined {
   const n = Number(s.replace(',', '.'));
   return Number.isFinite(n) && n > 1 ? n : undefined;
 }
+
+/** « à l'instant », « il y a 12 min », « il y a 3 h », puis la date. */
+export function relativeTime(iso: string): string {
+  const min = Math.round((Date.now() - Date.parse(iso)) / 60_000);
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  if (min < 24 * 60) return `il y a ${Math.round(min / 60)} h`;
+  return `le ${new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
+}
+
+/** Recherche insensible à la casse et aux accents. */
+export function normalizeText(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}

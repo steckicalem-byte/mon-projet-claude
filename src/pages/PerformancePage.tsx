@@ -92,7 +92,7 @@ export function PerformancePage() {
                     labelFormatter={(v: number) => `Prévu : ${num(v, 1)} %`}
                   />
                   <Line data={[{ predicted: 0, observed: 0 }, { predicted: 100, observed: 100 }]} dataKey="observed" name="Parfait" stroke="rgb(var(--muted))" strokeDasharray="4 4" dot={false} isAnimationActive={false} legendType="none" />
-                  <Line dataKey="observed" name="Observé" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
+                  <Line dataKey="observed" name="Observé" stroke="rgb(var(--brand))" strokeWidth={2} dot={{ r: 3, fill: 'rgb(var(--brand))' }} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

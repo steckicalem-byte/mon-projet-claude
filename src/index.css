@@ -4,21 +4,33 @@
 
 @layer base {
   :root {
-    --bg: 246 246 251;
+    --bg: 244 247 245;
     --surface: 255 255 255;
-    --elevated: 240 240 247;
-    --line: 226 226 236;
-    --fg: 17 17 27;
-    --muted: 100 100 120;
+    --elevated: 236 242 239;
+    --line: 218 227 222;
+    --fg: 12 20 16;
+    --muted: 86 102 95;
+    /* Vert profond en clair : contraste suffisant pour du texte sur fond blanc. */
+    --brand: 4 138 70;
+    --brand-hi: 6 152 78;
+    --brand-lo: 3 112 56;
+    --on-brand: 255 255 255;
+    --electric: 8 132 166;
     color-scheme: light;
   }
   .dark {
-    --bg: 7 7 12;
-    --surface: 17 17 27;
-    --elevated: 26 26 38;
-    --line: 40 40 56;
-    --fg: 236 236 245;
-    --muted: 148 148 170;
+    --bg: 5 8 7;
+    --surface: 12 17 15;
+    --elevated: 19 26 23;
+    --line: 33 43 39;
+    --fg: 233 242 237;
+    --muted: 138 156 148;
+    /* Vert électrique en sombre. */
+    --brand: 46 240 128;
+    --brand-hi: 110 250 165;
+    --brand-lo: 24 196 100;
+    --on-brand: 4 14 8;
+    --electric: 56 214 240;
     color-scheme: dark;
   }
 
@@ -53,6 +65,14 @@
   }
   .label {
     @apply mb-1.5 block text-sm font-medium text-fg;
+  }
+  .skeleton {
+    @apply animate-shimmer rounded-xl bg-[length:200%_100%];
+    background-image: linear-gradient(90deg, rgb(var(--elevated)) 0%, rgb(var(--line)) 50%, rgb(var(--elevated)) 100%);
+  }
+  .chip {
+    @apply inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-3.5 text-sm font-medium text-muted transition
+      hover:border-brand-500/50 hover:text-fg aria-pressed:border-brand-500 aria-pressed:bg-brand-500/10 aria-pressed:text-fg;
   }
   .gradient-text {
     @apply bg-gradient-to-r from-brand-400 to-electric-400 bg-clip-text text-transparent;

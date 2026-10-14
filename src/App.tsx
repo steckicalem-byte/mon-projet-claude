@@ -3,7 +3,8 @@ import { PrefsProvider } from '@/context/PrefsContext';
 import { DataProvider } from '@/context/DataContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { Layout } from '@/components/layout/Layout';
-import { PredictionsPage } from '@/pages/PredictionsPage';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { MatchesPage } from '@/pages/MatchesPage';
 import { MatchPage } from '@/pages/MatchPage';
 import { TeamsPage } from '@/pages/TeamsPage';
 import { PerformancePage } from '@/pages/PerformancePage';
@@ -21,7 +22,8 @@ export default function App() {
           <DataProvider>
             <Routes>
               <Route element={<Layout />}>
-                <Route index element={<PredictionsPage />} />
+                <Route index element={<DashboardPage />} />
+                <Route path="matchs" element={<MatchesPage />} />
                 <Route path="match/:id" element={<MatchPage />} />
                 <Route path="equipes" element={<TeamsPage />} />
                 <Route path="performance" element={<PerformancePage />} />

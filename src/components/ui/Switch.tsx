@@ -27,7 +27,7 @@ export function Switch({ checked, onChange, label, description, disabled }: Prop
         onClick={() => onChange(!checked)}
         className={cn(
           'relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-50',
-          checked ? 'bg-gradient-to-r from-brand-600 to-electric-600' : 'bg-muted/40',
+          checked ? 'bg-brand-500' : 'bg-muted/40',
         )}
       >
         <span className={cn('inline-block h-5 w-5 rounded-full bg-white shadow transition', checked ? 'translate-x-[22px]' : 'translate-x-0.5')} />

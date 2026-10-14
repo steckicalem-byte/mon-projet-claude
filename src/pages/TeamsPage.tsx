@@ -116,7 +116,7 @@ export function TeamsPage() {
                       ) : null;
                     }}
                   />
-                  <Scatter data={chart} fill="#8b5cf6" isAnimationActive={false}>
+                  <Scatter data={chart} fill="rgb(var(--brand))" isAnimationActive={false}>
                     <LabelList dataKey="name" position="top" fontSize={10} fill="rgb(var(--muted))" />
                   </Scatter>
                 </ScatterChart>

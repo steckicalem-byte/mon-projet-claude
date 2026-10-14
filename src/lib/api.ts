@@ -25,10 +25,11 @@ export class ApiError extends Error {
 
 const CACHE_MINUTES = { current: 10, previous: 60 * 24 * 7 };
 
-async function fetchSeason(code: string, season: number | null, ttlMinutes: number, force: boolean): Promise<Match[]> {
+/** Matchs d'une saison + date (ms) à laquelle ils ont été récupérés auprès de l'API. */
+async function fetchSeason(code: string, season: number | null, ttlMinutes: number, force: boolean): Promise<{ at: number; matches: Match[] }> {
   const key = `cache:${code}:${season ?? 'current'}`;
   const cached = readJSON<{ at: number; matches: Match[] } | null>(key, null);
-  if (!force && cached && Date.now() - cached.at < ttlMinutes * 60_000) return cached.matches;
+  if (!force && cached && Date.now() - cached.at < ttlMinutes * 60_000) return cached;
 
   const qs = new URLSearchParams({ competition: code });
   if (season != null) qs.set('season', String(season));
@@ -44,8 +45,9 @@ async function fetchSeason(code: string, season: number | null, ttlMinutes: numb
   if (!res.ok) throw new ApiError(body.message ?? `Erreur ${res.status}`, body.error ?? 'HTTP', res.status);
 
   const matches = body.matches.map(normalizeMatch).filter((m): m is Match => m != null);
-  writeJSON(key, { at: Date.now(), matches });
-  return matches;
+  const fresh = { at: Date.now(), matches };
+  writeJSON(key, fresh);
+  return fresh;
 }
 
 /** Erreurs signifiant « l'API n'est pas branchée » : on bascule silencieusement en démo. */
@@ -54,13 +56,13 @@ const NOT_CONFIGURED = new Set(['NO_API_KEY', 'NO_PROXY', 'NETWORK']);
 export async function loadDataset(competition: Competition, force = false): Promise<Dataset & { notice?: string }> {
   if (import.meta.env.MODE !== 'artifact') {
     try {
-      const current = await fetchSeason(competition.code, null, CACHE_MINUTES.current, force);
+      const { at, matches: current } = await fetchSeason(competition.code, null, CACHE_MINUTES.current, force);
       if (current.length === 0) throw new ApiError('Aucun match renvoyé pour cette compétition.', 'EMPTY', 200);
       const currentSeason = Math.max(...current.map((m) => m.season));
       let previous: Match[] = [];
       let notice: string | undefined;
       try {
-        previous = await fetchSeason(competition.code, currentSeason - 1, CACHE_MINUTES.previous, false);
+        previous = (await fetchSeason(competition.code, currentSeason - 1, CACHE_MINUTES.previous, false)).matches;
       } catch (e) {
         notice = `Saison précédente indisponible (${(e as Error).message}) : le modèle n'utilise que la saison en cours, ses pronostics sont moins fiables en début de saison.`;
       }
@@ -69,7 +71,8 @@ export async function loadDataset(competition: Competition, force = false): Prom
         source: 'api',
         matches: [...previous, ...current].sort((a, b) => a.utcDate.localeCompare(b.utcDate)),
         currentSeason,
-        fetchedAt: new Date().toISOString(),
+        // Date de la récupération des matchs de la saison en cours (cache inclus).
+        fetchedAt: new Date(at).toISOString(),
         notice,
       };
     } catch (e) {

@@ -54,10 +54,10 @@ function ScoreGrid({ p }: { p: Prediction }) {
                   <td
                     key={y}
                     className="h-9 w-11 rounded-md text-center"
-                    style={{ background: `rgb(139 92 246 / ${(0.08 + 0.85 * (v / max)).toFixed(2)})` }}
+                    style={{ background: `rgb(var(--brand) / ${(0.08 + 0.85 * (v / max)).toFixed(2)})` }}
                     title={`${x}-${y} : ${pct(v, 1)}`}
                   >
-                    <span className={v / max > 0.5 ? 'font-semibold text-white' : ''}>{(v * 100).toFixed(1).replace('.', ',')}</span>
+                    <span className={v / max > 0.5 ? 'font-semibold text-on-brand' : ''}>{(v * 100).toFixed(1).replace('.', ',')}</span>
                   </td>
                 );
               })}
@@ -154,7 +154,7 @@ export function MatchPage() {
         icon={SearchX}
         title="Match introuvable"
         description="Ce match n'appartient pas au championnat sélectionné."
-        action={<Link to="/" className="font-medium text-brand-500 hover:underline">Retour aux pronostics</Link>}
+        action={<Link to="/matchs" className="font-medium text-brand-500 hover:underline">Retour aux matchs</Link>}
       />
     );
   }
@@ -165,8 +165,8 @@ export function MatchPage() {
 
   return (
     <>
-      <Link to="/" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg">
-        <ArrowLeft className="h-4 w-4" aria-hidden /> Pronostics
+      <Link to="/matchs" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg">
+        <ArrowLeft className="h-4 w-4" aria-hidden /> Matchs
       </Link>
 
       <header className="card mb-5 p-5 sm:p-6">
