@@ -5,6 +5,7 @@ import { useToast } from './ToastContext';
 import { LocalRepo, mergeData, QueuedRepo, sanitizeData, upsertItem, type UserRepo } from '@/lib/user/repo';
 import { getSupabase, SupabaseRepo, supabaseConfigured } from '@/lib/user/supabaseRepo';
 import { settle } from '@/lib/user/markets';
+import { applyMatchUpdates } from '@/lib/user/sync';
 import { writeJSON } from '@/lib/storage';
 import { bookmarkId, EMPTY_DATA, newId, type AnyItem, type Bookmark, type Category, type ItemKind, type Pick as PickItem, type UserData } from '@/lib/user/types';
 
@@ -44,10 +45,6 @@ interface UserDataApi {
 const Ctx = createContext<UserDataApi | null>(null);
 const now = () => new Date().toISOString();
 const HUES = [145, 190, 45, 330, 265, 20, 100, 215];
-
-function sameMatch(a: Match, b: Match) {
-  return a.status === b.status && a.utcDate === b.utcDate && a.score?.home === b.score?.home && a.score?.away === b.score?.away;
-}
 
 export function UserDataProvider({ children }: { children: ReactNode }) {
   const { notify } = useToast();
@@ -278,21 +275,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   // --- Mise à jour des matchs suivis ---------------------------------------------
   const syncMatches = useCallback(
     (competition: string, matches: Match[]) => {
-      const byId = new Map(matches.map((m) => [m.id, m]));
-      const t = now();
-      const d = dataRef.current;
-      const bookmarks = d.bookmarks
-        .filter((b) => b.competition === competition && byId.has(b.matchId) && !sameMatch(b.match, byId.get(b.matchId)!))
-        .map((b) => ({ ...b, match: byId.get(b.matchId)!, updatedAt: t }));
-      const picks = d.picks
-        .filter((p) => p.competition === competition && byId.has(p.matchId))
-        .map((p) => {
-          const match = byId.get(p.matchId)!;
-          const status = p.manual ? p.status : settle(match, p.market, p.selection);
-          if (sameMatch(p.match, match) && status === p.status) return null;
-          return { ...p, match, status, settledAt: status === p.status ? p.settledAt : status === 'pending' ? null : t, updatedAt: t };
-        })
-        .filter((p): p is PickType => p != null);
+      const { bookmarks, picks } = applyMatchUpdates(dataRef.current, competition, matches, now());
       if (!bookmarks.length && !picks.length) return;
       setData((cur) => ({
         ...cur,

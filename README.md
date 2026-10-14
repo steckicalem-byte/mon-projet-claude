@@ -11,8 +11,9 @@ Application web de **pronostics de football** : pour chaque match à venir, elle
 
 | Page | Contenu |
 | --- | --- |
-| **Pronostics** | Matchs des deux prochaines semaines, groupés par jour : barre de probabilités 1/N/2, score le plus probable, +2,5 buts, « les deux équipes marquent », badge **Value** si une cote saisie est intéressante. Choix de la compétition (Ligue des champions, Ligue Europa*, Ligue 1, Premier League, LaLiga, Serie A, Bundesliga, Eredivisie, Primeira Liga, Championship, Brasileirão). |
-| **Détail d'un match** | **Analyse par Claude Opus 5.5** (bouton) : Claude cherche sur le web blessures, compositions et forme récente, puis donne ses probabilités, un score, un résumé, les facteurs clés et ses sources, à côté du modèle statistique. Buts attendus, tous les marchés (1N2, double chance, plus/moins 1,5 / 2,5 / 3,5, BTTS) avec leur **cote juste**, grille de probabilité de chaque score, forme des 5 derniers matchs. **Comparateur de cotes** : marge du bookmaker, espérance de gain et mise conseillée (critère de Kelly fractionné). |
+| **Tableau de bord** | Chiffres clés, fiabilité et date de mise à jour des données, suivi de vos favoris et pronostics, prochains matchs, matchs les plus nets et matchs à buts. |
+| **Matchs** | Matchs des deux prochaines semaines, groupés par jour : barre de probabilités 1/N/2, score le plus probable, +2,5 buts, « les deux équipes marquent », badge **Value** si une cote saisie est intéressante. Choix de la compétition (Ligue des champions, Ligue Europa*, Ligue 1, Premier League, LaLiga, Serie A, Bundesliga, Eredivisie, Primeira Liga, Championship, Brasileirão). |
+| **Détail d'un match** | **Analyse statistique expliquée** (facteurs favorables à chaque équipe, fiabilité, date de mise à jour), bilan domicile/extérieur, buts marqués/encaissés, confrontations directes, « Mon suivi » (favori, catégories, note, pronostics).  **Analyse par Claude Opus 5.5** (bouton) : Claude cherche sur le web blessures, compositions et forme récente, puis donne ses probabilités, un score, un résumé, les facteurs clés et ses sources, à côté du modèle statistique. Buts attendus, tous les marchés (1N2, double chance, plus/moins 1,5 / 2,5 / 3,5, BTTS) avec leur **cote juste**, grille de probabilité de chaque score, forme des 5 derniers matchs. **Comparateur de cotes** : marge du bookmaker, espérance de gain et mise conseillée (critère de Kelly fractionné). |
 | **Équipes** | Classement de la saison, forme, forces offensive et défensive estimées, graphique attaque/défense. |
 | **Performance** | Backtest honnête : chaque match passé est prédit **uniquement avec les matchs joués avant lui**. Taux de bon 1N2, score de Brier, log-loss, comparés à une référence naïve, courbe de calibration et 20 derniers pronostics. |
 | **Paramètres** | Thème, championnat par défaut, bankroll, fraction de Kelly, seuil de value, état de la source de données, jeu responsable. |
@@ -35,6 +36,8 @@ Le modèle ne connaît ni les blessures, ni les compositions, ni la motivation :
 - **Favoris** : étoile sur chaque match ; catégories personnalisées, notes, filtres (date, compétition, équipe, statut, catégorie). Un favori garde une copie du match (statut et score mis à jour à chaque chargement de la compétition), sans doublon possible.
 - **Pronostics** : type de pari (1N2, double chance, plus/moins 1,5/2,5/3,5, les deux marquent), sélection, cote, mise ; règlement automatique au score final (90 minutes), statut modifiable à la main.
 - **Données** : export JSON (sauvegarde complète) et CSV (pronostics), import sans doublon.
+- **Mes pronostics** (`/paris`) : en attente / gagnés / perdus / annulés, taux de réussite calculé **uniquement sur les pronostics réglés** (gagnés + perdus), gain net en unités et en euros, ROI, gain cumulé et réussite par type de pari, historique filtrable (statut, pari, compétition, période, recherche).
+- Garde-fou : la copie d'un match suivi n'est mise à jour (et un pronostic réglé) que si les deux équipes correspondent, pour qu'aucune autre source de données ne règle un pronostic à tort.
 
 Sans configuration, tout est enregistré **dans le navigateur**. Pour des **comptes en ligne** (connexion par lien e-mail, synchronisation entre appareils) :
 
@@ -64,6 +67,7 @@ cp .env.example .env     # puis renseignez FOOTBALL_DATA_API_KEY (facultatif)
 npm run dev              # → http://localhost:5173
 npm run build            # vérification TypeScript + build de production dans dist/
 npm run typecheck
+npm test               # tests unitaires (Vitest)
 ```
 
 ### Brancher les vraies données

@@ -1,8 +1,10 @@
 import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CalendarDays, Database, FlaskConical, Gem, Goal, ShieldCheck, Target } from 'lucide-react';
+import { ArrowRight, CalendarDays, Clock, Database, FlaskConical, Gem, Goal, ShieldCheck, Star, Target, Trophy } from 'lucide-react';
 import { useData } from '@/context/DataContext';
 import { usePrefs } from '@/context/PrefsContext';
+import { useUserData } from '@/context/UserDataContext';
+import { computeStats } from '@/lib/user/stats';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DataNotice, DataToolbar, LoadingCards } from '@/components/match/parts';
@@ -54,6 +56,8 @@ function reliability(trainingMatches: number, teams: number) {
 export function DashboardPage() {
   const { dataset, model, loading, predictMatch } = useData();
   const { odds, preferences } = usePrefs();
+  const { data: user } = useUserData();
+  const pickStats = useMemo(() => computeStats(user.picks), [user.picks]);
 
   const upcoming = useMemo(() => {
     if (!dataset) return [];
@@ -115,6 +119,21 @@ export function DashboardPage() {
             <EmptyState icon={CalendarDays} title="Aucun match à venir" description="La saison est peut-être terminée ou en trêve. Essayez une autre compétition." />
           ) : (
             <>
+              <Section title="Mon suivi" link={{ to: '/paris', label: 'Mes pronostics' }}>
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <StatTile icon={Star} label="Matchs sauvegardés" value={user.bookmarks.length} hint={<Link to="/favoris" className="hover:underline">Voir mes favoris</Link>} />
+                  <StatTile icon={Clock} label="Pronostics en attente" value={pickStats.byStatus.pending} />
+                  <StatTile
+                    icon={Trophy}
+                    label="Taux de réussite"
+                    value={pickStats.hitRate == null ? '—' : pct(pickStats.hitRate)}
+                    tone={pickStats.hitRate == null ? 'default' : 'brand'}
+                    hint={pickStats.hitRate == null ? 'Aucun pronostic réglé' : `${pickStats.byStatus.won} gagnés / ${pickStats.byStatus.won + pickStats.byStatus.lost} réglés`}
+                  />
+                  <StatTile icon={Target} label="Gain net" value={`${pickStats.units > 0 ? '+' : ''}${pickStats.units.toFixed(2).replace('.', ',')} u`} hint="1 unité par pronostic réglé" />
+                </div>
+              </Section>
+
               <Section title="Prochains matchs" link={{ to: '/matchs', label: 'Tous les matchs' }}>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {upcoming.slice(0, 4).map(({ match, p }) => <MatchCard key={match.id} match={match} prediction={p} showDate />)}

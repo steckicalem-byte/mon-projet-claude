@@ -83,7 +83,8 @@ export function generateDemoMatches(now = new Date()): { matches: Match[]; curre
 
   const byId = new Map(teams.map((t) => [t.id, t]));
   const matches: Match[] = [];
-  let nextId = 1;
+  // Identifiants très élevés : jamais confondus avec ceux de football-data.org.
+  let nextId = 900_000_001;
   for (const { year, ids } of seasons) {
     const start = Date.UTC(year, 7, 9, 19); // ~9 août, 19h UTC
     roundRobin(ids).forEach((round, md) => {

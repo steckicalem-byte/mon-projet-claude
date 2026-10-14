@@ -16,6 +16,8 @@
     --brand-lo: 3 112 56;
     --on-brand: 255 255 255;
     --electric: 8 132 166;
+    /* Tracés de graphiques : teinte validée (bande de luminosité + contraste) pour chaque fond. */
+    --chart: 4 138 70;
     color-scheme: light;
   }
   .dark {
@@ -31,6 +33,7 @@
     --brand-lo: 24 196 100;
     --on-brand: 4 14 8;
     --electric: 56 214 240;
+    --chart: 23 169 87;
     color-scheme: dark;
   }
 

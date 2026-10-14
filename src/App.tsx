@@ -5,6 +5,7 @@ import { ToastProvider } from '@/context/ToastContext';
 import { UserDataProvider } from '@/context/UserDataContext';
 import { MatchSync } from '@/components/user/MatchSync';
 import { FavoritesPage } from '@/pages/FavoritesPage';
+import { PicksPage } from '@/pages/PicksPage';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { MatchesPage } from '@/pages/MatchesPage';
@@ -30,6 +31,7 @@ export default function App() {
                   <Route index element={<DashboardPage />} />
                   <Route path="matchs" element={<MatchesPage />} />
                   <Route path="favoris" element={<FavoritesPage />} />
+                  <Route path="paris" element={<PicksPage />} />
                   <Route path="match/:id" element={<MatchPage />} />
                   <Route path="equipes" element={<TeamsPage />} />
                   <Route path="performance" element={<PerformancePage />} />
