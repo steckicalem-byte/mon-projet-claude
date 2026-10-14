@@ -11,6 +11,16 @@ export function cachedAnalysis(matchId: number): AiAnalysis | null {
   return a && Date.now() - Date.parse(a.generatedAt) < TTL_MS ? a : null;
 }
 
+/** L'analyse IA est-elle configurée sur le serveur ? (une seule vérification par session) */
+let enabledCheck: Promise<boolean> | null = null;
+export function analysisEnabled(): Promise<boolean> {
+  enabledCheck ??= fetch('/api/analyse?check=1')
+    .then((r) => (r.ok ? (r.json() as Promise<{ enabled?: boolean }>) : { enabled: false }))
+    .then((b) => b.enabled === true)
+    .catch(() => false);
+  return enabledCheck;
+}
+
 export async function requestAnalysis(competition: string, matchId: number): Promise<AiAnalysis> {
   let res: Response;
   try {

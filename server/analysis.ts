@@ -101,6 +101,8 @@ interface SubmitInput {
 }
 
 export async function analyseMatch(url: URL, footballKey: string | undefined, anthropicKey: string | undefined): Promise<ProxyResult> {
+  // ?check=1 : indique seulement si l'analyse est activée (l'interface masque le bouton sinon).
+  if (url.searchParams.has('check')) return json(200, { enabled: Boolean(anthropicKey && footballKey) });
   if (!anthropicKey) return json(503, { error: 'NO_ANTHROPIC_KEY', message: "Aucune clé ANTHROPIC_API_KEY n'est configurée sur le serveur." });
   if (!footballKey) return json(503, { error: 'NO_API_KEY', message: "L'analyse IA nécessite les données réelles (clé FOOTBALL_DATA_API_KEY)." });
 

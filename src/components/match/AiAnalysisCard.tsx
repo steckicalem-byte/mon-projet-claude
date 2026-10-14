@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ExternalLink, Loader2, Sparkles } from 'lucide-react';
 import type { Dataset, Match } from '@/types';
 import type { Prediction } from '@/lib/model/poisson';
-import { cachedAnalysis, requestAnalysis, type AiAnalysis } from '@/lib/aiAnalysis';
+import { analysisEnabled, cachedAnalysis, requestAnalysis, type AiAnalysis } from '@/lib/aiAnalysis';
 import { pct } from '@/lib/format';
 import { Button } from '@/components/ui/Button';
 import { ProbBar } from './parts';
@@ -39,6 +39,16 @@ export function AiAnalysisCard({ dataset, match, model }: { dataset: Dataset; ma
   const [analysis, setAnalysis] = useState<AiAnalysis | null>(() => cachedAnalysis(match.id));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    if (dataset.source !== 'api') return;
+    let alive = true;
+    analysisEnabled().then((v) => alive && setEnabled(v));
+    return () => {
+      alive = false;
+    };
+  }, [dataset.source]);
 
   const run = async () => {
     setLoading(true);
@@ -52,6 +62,9 @@ export function AiAnalysisCard({ dataset, match, model }: { dataset: Dataset; ma
     }
   };
 
+  // Sans clé Anthropic configurée (ou en mode démo), la carte n'apparaît pas.
+  if (!enabled && !analysis) return null;
+
   return (
     <section className="card p-5 lg:col-span-2" aria-busy={loading}>
       <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
@@ -61,9 +74,7 @@ export function AiAnalysisCard({ dataset, match, model }: { dataset: Dataset; ma
         Claude Opus 5.5 recherche les dernières informations (blessures, compositions, forme) et les combine avec le modèle statistique.
       </p>
 
-      {dataset.source === 'demo' ? (
-        <p className="text-sm text-muted">Disponible uniquement avec les données réelles (les équipes de démonstration sont fictives).</p>
-      ) : analysis ? (
+      {analysis ? (
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <ProbBar home={analysis.probabilities.home} draw={analysis.probabilities.draw} away={analysis.probabilities.away} />

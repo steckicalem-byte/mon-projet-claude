@@ -39,7 +39,7 @@ Le modèle ne connaît ni les blessures, ni les compositions, ni la motivation :
 - le repli automatique en cas de refus par les filtres de sécurité est activé (`fallbacks: "default"`) ;
 - une analyse réussie est mise en cache 6 h sur le CDN de Vercel et dans le navigateur, pour ne pas la repayer.
 
-Pour l'activer : créez une clé sur <https://console.anthropic.com> (facturation à l'usage, comptez quelques dizaines de centimes par analyse au plus), ajoutez-la dans Vercel sous `ANTHROPIC_API_KEY`, puis redéployez. Fixez une **limite de dépenses** dans la console Anthropic : sur un site public, n'importe quel visiteur peut lancer des analyses.
+Le bouton n'apparaît que si `ANTHROPIC_API_KEY` est configurée. Pour l'activer : créez une clé sur <https://console.anthropic.com> (facturation à l'usage, comptez quelques dizaines de centimes par analyse au plus), ajoutez-la dans Vercel sous `ANTHROPIC_API_KEY`, puis redéployez. Fixez une **limite de dépenses** dans la console Anthropic : sur un site public, n'importe quel visiteur peut lancer des analyses.
 
 ## Lancer le projet
 
