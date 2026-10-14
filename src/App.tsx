@@ -2,6 +2,9 @@ import { BrowserRouter, HashRouter, Route, Routes } from 'react-router-dom';
 import { PrefsProvider } from '@/context/PrefsContext';
 import { DataProvider } from '@/context/DataContext';
 import { ToastProvider } from '@/context/ToastContext';
+import { UserDataProvider } from '@/context/UserDataContext';
+import { MatchSync } from '@/components/user/MatchSync';
+import { FavoritesPage } from '@/pages/FavoritesPage';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { MatchesPage } from '@/pages/MatchesPage';
@@ -20,17 +23,21 @@ export default function App() {
       <ToastProvider>
         <PrefsProvider>
           <DataProvider>
-            <Routes>
-              <Route element={<Layout />}>
-                <Route index element={<DashboardPage />} />
-                <Route path="matchs" element={<MatchesPage />} />
-                <Route path="match/:id" element={<MatchPage />} />
-                <Route path="equipes" element={<TeamsPage />} />
-                <Route path="performance" element={<PerformancePage />} />
-                <Route path="parametres" element={<SettingsPage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Route>
-            </Routes>
+            <UserDataProvider>
+              <MatchSync />
+              <Routes>
+                <Route element={<Layout />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route path="matchs" element={<MatchesPage />} />
+                  <Route path="favoris" element={<FavoritesPage />} />
+                  <Route path="match/:id" element={<MatchPage />} />
+                  <Route path="equipes" element={<TeamsPage />} />
+                  <Route path="performance" element={<PerformancePage />} />
+                  <Route path="parametres" element={<SettingsPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
+              </Routes>
+            </UserDataProvider>
           </DataProvider>
         </PrefsProvider>
       </ToastProvider>

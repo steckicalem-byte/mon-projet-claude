@@ -1,11 +1,20 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, SearchX } from 'lucide-react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Pencil, SearchX, Star } from 'lucide-react';
 import { useData } from '@/context/DataContext';
 import { usePrefs } from '@/context/PrefsContext';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FormChips, ProbBar, TeamCrest } from '@/components/match/parts';
 import { AiAnalysisCard } from '@/components/match/AiAnalysisCard';
+import { BookmarkButton } from '@/components/user/BookmarkButton';
+import { BookmarkEditor } from '@/components/user/BookmarkEditor';
+import { CategoryPill } from '@/components/user/CategoryPill';
+import { PickForm } from '@/components/user/PickForm';
+import { PickRow } from '@/components/user/PickRow';
+import { Button } from '@/components/ui/Button';
+import { useUserData } from '@/context/UserDataContext';
+import { COMPETITIONS } from '@/lib/competitions';
+import { bookmarkId } from '@/lib/user/types';
 import { bookmakerMargin, expectedValue, fairOdds, kelly } from '@/lib/model/betting';
 import type { Prediction } from '@/lib/model/poisson';
 import { dayLabel, euros, num, parseOdds, pct, shortDate, teamForm, timeLabel } from '@/lib/format';
@@ -141,19 +150,77 @@ function OddsComparator({ match, p }: { match: Match; p: Prediction }) {
   );
 }
 
+function MyTracking({ match, competition, p }: { match: Match; competition: string; p: Prediction }) {
+  const { data, toggleBookmark } = useUserData();
+  const [editing, setEditing] = useState(false);
+  const bookmark = data.bookmarks.find((b) => b.id === bookmarkId(competition, match.id)) ?? null;
+  const picks = data.picks.filter((x) => x.competition === competition && x.matchId === match.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const cats = bookmark ? data.categories.filter((c) => bookmark.categoryIds.includes(c.id)) : [];
+
+  return (
+    <Section title="Mon suivi" className="lg:col-span-2">
+      {bookmark ? (
+        <div className="mb-5 flex flex-col gap-3 rounded-xl bg-elevated/60 p-3 sm:flex-row sm:items-start">
+          <Star className="mt-0.5 h-5 w-5 shrink-0 fill-amber-400 text-amber-400" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Dans vos favoris</p>
+            {cats.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1.5">{cats.map((c) => <CategoryPill key={c.id} category={c} />)}</div>}
+            {bookmark.note ? <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{bookmark.note}</p> : <p className="mt-1 text-xs text-muted">Aucune note.</p>}
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            <Pencil className="h-3.5 w-3.5" aria-hidden /> Catégories & note
+          </Button>
+        </div>
+      ) : (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-line p-3">
+          <p className="text-sm text-muted">Ajoutez ce match à vos favoris pour le retrouver, le classer et l’annoter.</p>
+          <Button variant="secondary" size="sm" onClick={() => toggleBookmark(match, competition)}>
+            <Star className="h-3.5 w-3.5" aria-hidden /> Ajouter aux favoris
+          </Button>
+        </div>
+      )}
+
+      <h3 className="mb-1 text-sm font-semibold">Mes pronostics sur ce match</h3>
+      {picks.length ? (
+        <ul className="mb-4 divide-y divide-line">{picks.map((x) => <PickRow key={x.id} pick={x} />)}</ul>
+      ) : (
+        <p className="mb-4 text-sm text-muted">Aucun pronostic enregistré.</p>
+      )}
+      <details className="group rounded-xl border border-line p-3 open:bg-elevated/40" open={picks.length === 0}>
+        <summary className="cursor-pointer select-none text-sm font-medium text-brand-700 dark:text-brand-400">Ajouter un pronostic</summary>
+        <div className="mt-3">
+          <PickForm match={match} competition={competition} prediction={p} />
+        </div>
+      </details>
+      <BookmarkEditor bookmark={bookmark} open={editing} onClose={() => setEditing(false)} />
+    </Section>
+  );
+}
+
 export function MatchPage() {
   const { id } = useParams();
-  const { dataset, predictMatch } = useData();
-  const match = dataset?.matches.find((m) => String(m.id) === id);
+  const [params] = useSearchParams();
+  const { dataset, loading, predictMatch } = useData();
+  const { preferences, updatePreferences } = usePrefs();
+  const wanted = params.get('c');
+  const validWanted = wanted && COMPETITIONS.some((c) => c.code === wanted) ? wanted : null;
+
+  // Lien vers un match d'une autre compétition (favori, historique) : on bascule dessus.
+  useEffect(() => {
+    if (validWanted && validWanted !== preferences.competition) updatePreferences({ competition: validWanted });
+  }, [validWanted, preferences.competition, updatePreferences]);
+
+  const switching = Boolean(validWanted && dataset && dataset.competition.code !== validWanted);
+  const match = switching ? undefined : dataset?.matches.find((m) => String(m.id) === id);
   const p = match ? predictMatch(match) : null;
 
-  if (!dataset) return <div className="card h-64 animate-pulse bg-elevated/50" aria-busy="true" />;
+  if (!dataset || switching || (loading && !match)) return <div className="skeleton h-72" aria-busy="true" aria-label="Chargement du match" />;
   if (!match || !p) {
     return (
       <EmptyState
         icon={SearchX}
         title="Match introuvable"
-        description="Ce match n'appartient pas au championnat sélectionné."
+        description="Ce match n'est plus disponible dans les données de cette compétition (saison trop ancienne ou changement de source)."
         action={<Link to="/matchs" className="font-medium text-brand-500 hover:underline">Retour aux matchs</Link>}
       />
     );
@@ -169,7 +236,8 @@ export function MatchPage() {
         <ArrowLeft className="h-4 w-4" aria-hidden /> Matchs
       </Link>
 
-      <header className="card mb-5 p-5 sm:p-6">
+      <header className="card relative mb-5 p-5 sm:p-6">
+        <BookmarkButton match={match} competition={dataset.competition.code} size="lg" className="absolute right-3 top-3" />
         <p className="mb-4 text-center text-xs first-letter:uppercase text-muted">
           {dataset.competition.name}{match.matchday ? ` · Journée ${match.matchday}` : ''} · {dayLabel(match.utcDate)} à {timeLabel(match.utcDate)}
         </p>
@@ -242,6 +310,8 @@ export function MatchPage() {
             ))}
           </ol>
         </Section>
+
+        <MyTracking match={match} competition={dataset.competition.code} p={p} />
 
         <OddsComparator match={match} p={p} />
 

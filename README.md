@@ -30,6 +30,21 @@ Les cotes saisies et les préférences sont stockées dans le navigateur (localS
 
 Le modèle ne connaît ni les blessures, ni les compositions, ni la motivation : croisez toujours avec l'actualité. La page **Performance** permet de vérifier s'il apporte réellement quelque chose sur le championnat choisi.
 
+## Favoris, pronostics et comptes
+
+- **Favoris** : étoile sur chaque match ; catégories personnalisées, notes, filtres (date, compétition, équipe, statut, catégorie). Un favori garde une copie du match (statut et score mis à jour à chaque chargement de la compétition), sans doublon possible.
+- **Pronostics** : type de pari (1N2, double chance, plus/moins 1,5/2,5/3,5, les deux marquent), sélection, cote, mise ; règlement automatique au score final (90 minutes), statut modifiable à la main.
+- **Données** : export JSON (sauvegarde complète) et CSV (pronostics), import sans doublon.
+
+Sans configuration, tout est enregistré **dans le navigateur**. Pour des **comptes en ligne** (connexion par lien e-mail, synchronisation entre appareils) :
+
+1. Créez un projet gratuit sur <https://supabase.com>.
+2. *SQL Editor* → collez et exécutez `supabase/schema.sql` (table + règles de sécurité : chaque utilisateur ne voit que ses données).
+3. *Authentication → URL Configuration* : mettez l'adresse du site Vercel dans *Site URL* et *Redirect URLs*.
+4. *Project Settings → API* : copiez *Project URL* et la clé *anon public* dans Vercel sous `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY`, puis redéployez.
+
+À la première connexion, les favoris déjà présents sur l'appareil sont ajoutés au compte (une copie de secours est gardée). Une modification faite hors ligne est mise en file d'attente et envoyée dès que possible.
+
 ## Analyse IA (Claude ou Gemini)
 
 `server/analysis.ts`, exposé par `api/analyse.ts` (`GET /api/analyse?competition=CL&match=<id>`). Le bouton n'apparaît que si une clé d'IA est configurée :

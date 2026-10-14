@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SelectField, TextField } from '@/components/ui/Field';
 import { Switch } from '@/components/ui/Switch';
 import { Button } from '@/components/ui/Button';
+import { AccountSection } from '@/components/user/AccountSection';
 import { COMPETITIONS } from '@/lib/competitions';
 import { clearAll } from '@/lib/storage';
 
@@ -14,6 +15,7 @@ export function SettingsPage() {
   const { preferences, updatePreferences } = usePrefs();
   const { dataset } = useData();
   const { notify } = useToast();
+  const [confirmClear, setConfirmClear] = useState(false);
   const [bankroll, setBankroll] = useState(String(preferences.bankroll));
   const bankrollValue = Number(bankroll.replace(',', '.'));
   const bankrollError = Number.isFinite(bankrollValue) && bankrollValue >= 0 ? undefined : 'Montant invalide';
@@ -22,6 +24,8 @@ export function SettingsPage() {
     <>
       <PageHeader title="Paramètres" />
       <div className="grid gap-5 lg:grid-cols-2">
+        <AccountSection />
+
         <section className="card p-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">Affichage</h2>
           <Switch label="Thème sombre" checked={preferences.theme === 'dark'} onChange={(v) => updatePreferences({ theme: v ? 'dark' : 'light' })} />
@@ -80,16 +84,31 @@ export function SettingsPage() {
             Obtenir une clé API <ExternalLink className="h-3.5 w-3.5" aria-hidden />
           </a>
           <div className="mt-5 border-t border-line pt-4">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                clearAll();
-                notify('Cotes, préférences et cache effacés. Rechargement…', 'info');
-                window.setTimeout(() => window.location.reload(), 800);
-              }}
-            >
-              <Trash2 className="h-4 w-4" aria-hidden /> Effacer les données locales
-            </Button>
+            {confirmClear ? (
+              <div className="space-y-2">
+                <p className="text-sm">
+                  Effacer préférences, cotes, cache <strong>et les favoris/pronostics enregistrés sur cet appareil</strong> ? Pensez à exporter vos données
+                  avant. Les données d’un compte en ligne ne sont pas supprimées.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => setConfirmClear(false)}>Annuler</Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => {
+                      clearAll();
+                      notify('Données de cet appareil effacées. Rechargement…', 'info');
+                      window.setTimeout(() => window.location.reload(), 800);
+                    }}
+                  >
+                    Tout effacer
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button variant="secondary" onClick={() => setConfirmClear(true)}>
+                <Trash2 className="h-4 w-4" aria-hidden /> Effacer les données de cet appareil
+              </Button>
+            )}
           </div>
         </section>
 
