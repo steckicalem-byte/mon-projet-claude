@@ -19,7 +19,7 @@ function Comparison({ match, model, ai }: { match: Match; model: Prediction; ai:
         <tr>
           <th className="pb-2 font-medium">Issue</th>
           <th className="pb-2 text-right font-medium">Modèle stat.</th>
-          <th className="pb-2 text-right font-medium">Claude</th>
+          <th className="pb-2 text-right font-medium">IA</th>
         </tr>
       </thead>
       <tbody>
@@ -68,10 +68,10 @@ export function AiAnalysisCard({ dataset, match, model }: { dataset: Dataset; ma
   return (
     <section className="card p-5 lg:col-span-2" aria-busy={loading}>
       <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
-        <Sparkles className="h-4 w-4 text-brand-400" aria-hidden /> Analyse par Claude (IA)
+        <Sparkles className="h-4 w-4 text-brand-400" aria-hidden /> Analyse par l’IA
       </h2>
       <p className="mb-4 text-xs text-muted">
-        Claude Opus 5.5 recherche les dernières informations (blessures, compositions, forme) et les combine avec le modèle statistique.
+        L’IA cherche les dernières informations (blessures, compositions, forme) quand c’est possible et les combine avec le modèle statistique.
       </p>
 
       {analysis ? (
@@ -82,6 +82,11 @@ export function AiAnalysisCard({ dataset, match, model }: { dataset: Dataset; ma
               Score le plus probable : <strong className="tabular-nums">{analysis.predictedScore.home} – {analysis.predictedScore.away}</strong>
               {' · '}Confiance : <strong>{analysis.confidence}</strong>
             </p>
+            {analysis.webSearch === false && (
+              <p className="mt-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700 ring-1 ring-inset ring-amber-500/30 dark:text-amber-300">
+                Sans recherche web (quota du fournisseur épuisé) : l’analyse s’appuie sur les statistiques et les connaissances générales de l’IA, pas sur l’actualité des blessures.
+              </p>
+            )}
             <p className="mt-3 text-sm leading-relaxed">{analysis.summary}</p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
               {analysis.keyFactors.map((f, i) => <li key={i}>{f}</li>)}
@@ -114,10 +119,10 @@ export function AiAnalysisCard({ dataset, match, model }: { dataset: Dataset; ma
         <div>
           <Button onClick={run} disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
-            {loading ? 'Claude analyse le match…' : 'Lancer l’analyse IA'}
+            {loading ? 'L’IA analyse le match…' : 'Lancer l’analyse IA'}
           </Button>
           <p className="mt-2 text-xs text-muted">
-            {loading ? 'Recherche des dernières informations : cela peut prendre une à deux minutes.' : 'Chaque analyse est facturée sur votre compte Anthropic (quelques centimes), puis gardée en mémoire 6 heures.'}
+            {loading ? 'Recherche des dernières informations : cela peut prendre une à deux minutes.' : 'L’analyse est gardée en mémoire 6 heures pour ne pas la refaire.'}
           </p>
           {error && <p role="alert" className="mt-3 text-sm text-red-500">{error}</p>}
         </div>

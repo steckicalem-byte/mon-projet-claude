@@ -1,5 +1,6 @@
 /**
- * Analyse d'un match par Claude Opus 5.5 (API Anthropic).
+ * Analyse d'un match par une IA : Claude Opus 5.5 (si ANTHROPIC_API_KEY est définie)
+ * ou Gemini (si GEMINI_API_KEY est définie, voir `server/gemini.ts`).
  *
  * Le serveur construit lui-même le contexte à partir de football-data.org
  * (le navigateur n'envoie qu'un identifiant de match) : impossible de détourner
@@ -13,6 +14,7 @@ import { normalizeMatch, type ApiMatch } from '../src/lib/normalize.js';
 import { fitModel, predict } from '../src/lib/model/poisson.js';
 import { COMPETITIONS } from '../src/lib/competitions.js';
 import type { Match } from '../src/types.js';
+import { runGemini } from './gemini.js';
 
 const MODEL = 'claude-opus-5-5';
 
@@ -25,10 +27,12 @@ export interface AiAnalysis {
   keyFactors: string[];
   sources: Array<{ title: string; url: string }>;
   model: string;
+  /** Faux si l'IA n'a pas pu chercher sur le web (quota) : elle n'a que les statistiques. */
+  webSearch: boolean;
   generatedAt: string;
 }
 
-function json(status: number, data: unknown, cache = false): ProxyResult {
+export function json(status: number, data: unknown, cache = false): ProxyResult {
   return {
     status,
     body: JSON.stringify(data),
@@ -58,15 +62,19 @@ function recentResults(matches: Match[], teamId: number, before: string): string
   return games.length ? games.map((g) => `  - ${g}`).join('\n') : '  (aucun match dans cette compétition sur la période)';
 }
 
-const SYSTEM = `Tu es un analyste football professionnel. Tu produis des pronostics honnêtes et calibrés pour une application de pronostics en français.
+export const SYSTEM_BASE = `Tu es un analyste football professionnel. Tu produis des pronostics honnêtes et calibrés pour une application de pronostics en français.
 
 Méthode :
 1. Pars des statistiques fournies (modèle de Poisson Dixon-Coles et résultats récents dans la compétition).
 2. Utilise la recherche web pour ce que le modèle ignore : blessures et suspensions, compositions probables, forme récente toutes compétitions confondues, enjeu du match, rotation prévisible, conditions particulières. Privilégie des sources récentes et fiables ; ignore les sites de paris qui vendent des pronostics.
 3. Ajuste les probabilités du modèle seulement quand une information le justifie, et dis pourquoi. Reste calibré : le football est très aléatoire, un favori net dépasse rarement 70 %.
-4. Termine en appelant l'outil submit_prediction (une seule fois). Les probabilités portent sur le résultat à la fin du temps réglementaire (90 minutes) et doivent sommer à 1.
+Les probabilités portent sur le résultat à la fin du temps réglementaire (90 minutes) et doivent sommer à 1.
 
 Rédige le résumé et les facteurs clés en français, de façon concise et factuelle. N'encourage pas à parier et ne promets aucun gain.`;
+
+const SYSTEM = `${SYSTEM_BASE}
+
+Termine en appelant l'outil submit_prediction (une seule fois).`;
 
 const SUBMIT_TOOL: Anthropic.Beta.BetaTool = {
   name: 'submit_prediction',
@@ -89,7 +97,7 @@ const SUBMIT_TOOL: Anthropic.Beta.BetaTool = {
   },
 };
 
-interface SubmitInput {
+export interface SubmitInput {
   home_win: number;
   draw: number;
   away_win: number;
@@ -100,10 +108,25 @@ interface SubmitInput {
   key_factors: string[];
 }
 
-export async function analyseMatch(url: URL, footballKey: string | undefined, anthropicKey: string | undefined): Promise<ProxyResult> {
+export interface AiKeys {
+  anthropic?: string;
+  gemini?: string;
+}
+
+/** Résultat brut d'un fournisseur d'IA, avant normalisation. */
+export interface ProviderResult {
+  input: SubmitInput;
+  sources: AiAnalysis['sources'];
+  model: string;
+  webSearch: boolean;
+}
+
+export async function analyseMatch(url: URL, footballKey: string | undefined, keys: AiKeys): Promise<ProxyResult> {
   // ?check=1 : indique seulement si l'analyse est activée (l'interface masque le bouton sinon).
-  if (url.searchParams.has('check')) return json(200, { enabled: Boolean(anthropicKey && footballKey) });
-  if (!anthropicKey) return json(503, { error: 'NO_ANTHROPIC_KEY', message: "Aucune clé ANTHROPIC_API_KEY n'est configurée sur le serveur." });
+  if (url.searchParams.has('check')) return json(200, { enabled: Boolean(footballKey && (keys.anthropic || keys.gemini)) });
+  if (!keys.anthropic && !keys.gemini) {
+    return json(503, { error: 'NO_AI_KEY', message: "Aucune clé d'IA (ANTHROPIC_API_KEY ou GEMINI_API_KEY) n'est configurée sur le serveur." });
+  }
   if (!footballKey) return json(503, { error: 'NO_API_KEY', message: "L'analyse IA nécessite les données réelles (clé FOOTBALL_DATA_API_KEY)." });
 
   const competition = (url.searchParams.get('competition') ?? '').toUpperCase();
@@ -145,7 +168,30 @@ ${recentResults(matches, match.home.id, match.utcDate)}
 Derniers résultats de ${match.away.name} dans la compétition :
 ${recentResults(matches, match.away.id, match.utcDate)}`;
 
-  const client = new Anthropic({ apiKey: anthropicKey });
+  const result = keys.anthropic ? await runClaude(context, keys.anthropic) : await runGemini(context, keys.gemini!);
+  if ('status' in result) return result;
+  const submitted = result.input;
+
+  const total = submitted.home_win + submitted.draw + submitted.away_win;
+  if (!(total > 0)) return json(502, { error: 'BAD_PREDICTION', message: 'Pronostic invalide, réessayez.' });
+
+  const analysis: AiAnalysis = {
+    matchId,
+    probabilities: { home: submitted.home_win / total, draw: submitted.draw / total, away: submitted.away_win / total },
+    predictedScore: { home: submitted.predicted_home_goals, away: submitted.predicted_away_goals },
+    confidence: submitted.confidence,
+    summary: submitted.summary,
+    keyFactors: submitted.key_factors.slice(0, 6),
+    sources: result.sources,
+    model: result.model,
+    webSearch: result.webSearch,
+    generatedAt: new Date().toISOString(),
+  };
+  return json(200, analysis, true);
+}
+
+async function runClaude(context: string, apiKey: string): Promise<ProviderResult | ProxyResult> {
+  const client = new Anthropic({ apiKey });
   const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: 'user', content: context }];
   let response: Anthropic.Beta.BetaMessage;
   try {
@@ -176,7 +222,7 @@ ${recentResults(matches, match.away.id, match.utcDate)}`;
   if (response.stop_reason === 'refusal') return json(502, { error: 'REFUSAL', message: "Claude a refusé d'analyser ce match." });
 
   const sources: AiAnalysis['sources'] = [];
-  let submitted: SubmitInput | null = null;
+  let submitted = null as SubmitInput | null;
   for (const msg of [...messages.filter((m) => m.role === 'assistant'), { role: 'assistant' as const, content: response.content }]) {
     if (typeof msg.content === 'string') continue;
     for (const block of msg.content) {
@@ -189,20 +235,5 @@ ${recentResults(matches, match.away.id, match.utcDate)}`;
     }
   }
   if (!submitted) return json(502, { error: 'NO_PREDICTION', message: "Claude n'a pas rendu de pronostic, réessayez." });
-
-  const total = submitted.home_win + submitted.draw + submitted.away_win;
-  if (!(total > 0)) return json(502, { error: 'BAD_PREDICTION', message: 'Pronostic invalide, réessayez.' });
-
-  const analysis: AiAnalysis = {
-    matchId,
-    probabilities: { home: submitted.home_win / total, draw: submitted.draw / total, away: submitted.away_win / total },
-    predictedScore: { home: submitted.predicted_home_goals, away: submitted.predicted_away_goals },
-    confidence: submitted.confidence,
-    summary: submitted.summary,
-    keyFactors: submitted.key_factors.slice(0, 6),
-    sources,
-    model: response.model,
-    generatedAt: new Date().toISOString(),
-  };
-  return json(200, analysis, true);
+  return { input: submitted, sources, model: response.model, webSearch: true };
 }

@@ -30,16 +30,14 @@ Les cotes saisies et les préférences sont stockées dans le navigateur (localS
 
 Le modèle ne connaît ni les blessures, ni les compositions, ni la motivation : croisez toujours avec l'actualité. La page **Performance** permet de vérifier s'il apporte réellement quelque chose sur le championnat choisi.
 
-## Analyse IA (Claude Opus 5.5)
+## Analyse IA (Claude ou Gemini)
 
-`server/analysis.ts`, exposé par `api/analyse.ts` (`GET /api/analyse?competition=CL&match=<id>`) :
+`server/analysis.ts`, exposé par `api/analyse.ts` (`GET /api/analyse?competition=CL&match=<id>`). Le bouton n'apparaît que si une clé d'IA est configurée :
 
-- le serveur reconstruit lui-même le contexte (match, résultats récents, probabilités du modèle) depuis football-data.org : le navigateur n'envoie qu'un identifiant, l'endpoint ne peut pas servir à interroger Claude sur autre chose ;
-- Claude (`claude-opus-5-5`, effort `medium`) utilise la recherche web (5 recherches max) puis rend son pronostic via un outil à schéma strict ;
-- le repli automatique en cas de refus par les filtres de sécurité est activé (`fallbacks: "default"`) ;
-- une analyse réussie est mise en cache 6 h sur le CDN de Vercel et dans le navigateur, pour ne pas la repayer.
+- `ANTHROPIC_API_KEY` → **Claude Opus 5.5** (prioritaire) : recherche web (5 max) puis pronostic via un outil à schéma strict, repli automatique en cas de refus (`fallbacks: "default"`) ;
+- sinon `GEMINI_API_KEY` → **Gemini** (`server/gemini.ts`, clé sur <https://aistudio.google.com/apikey>) : tente la recherche Google intégrée ; si son quota est épuisé (cas de l'offre gratuite), analyse **sans recherche web**, à partir des statistiques, et l'interface le signale. Modèles essayés dans l'ordre (`gemini-3-flash-preview`, `gemini-flash-latest`, `gemini-3.5-flash`, versions lite) en cas de saturation, avec un budget de 100 s ; `GEMINI_MODEL` impose un modèle en premier.
 
-Le bouton n'apparaît que si `ANTHROPIC_API_KEY` est configurée. Pour l'activer : créez une clé sur <https://console.anthropic.com> (facturation à l'usage, comptez quelques dizaines de centimes par analyse au plus), ajoutez-la dans Vercel sous `ANTHROPIC_API_KEY`, puis redéployez. Fixez une **limite de dépenses** dans la console Anthropic : sur un site public, n'importe quel visiteur peut lancer des analyses.
+Dans les deux cas, le serveur reconstruit lui-même le contexte (match, résultats récents, probabilités du modèle) depuis football-data.org : le navigateur n'envoie qu'un identifiant. Une analyse réussie est mise en cache 6 h (CDN Vercel et navigateur). Sur un site public, n'importe quel visiteur peut lancer des analyses : fixez une limite de dépenses chez le fournisseur.
 
 ## Lancer le projet
 
