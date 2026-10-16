@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "anthropic-agent-skills": {
+      "source": { "source": "github", "repo": "anthropics/skills" }
+    }
+  },
+  "enabledPlugins": {
+    "claude-api@anthropic-agent-skills": true
+  }
+}

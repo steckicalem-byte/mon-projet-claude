@@ -1,5 +1,5 @@
 {
-  "name": "studymate-ai",
+  "name": "pronofoot",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -8,9 +8,12 @@
     "build": "tsc -p tsconfig.json && vite build",
     "typecheck": "tsc -p tsconfig.json",
     "preview": "vite preview",
-    "build:single": "tsc -p tsconfig.json && vite build --mode artifact && node scripts/build-single.mjs"
+    "build:single": "tsc -p tsconfig.json && vite build --mode artifact && node scripts/build-single.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "@supabase/supabase-js": "^2.117.3",
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -26,6 +29,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "vitest": "^2.1.9"
   }
 }

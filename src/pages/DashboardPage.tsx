@@ -1,183 +1,174 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ArrowRight, CalendarCheck, CheckCircle2, ClipboardList, Clock3, Plus, Sparkles, UserRound } from 'lucide-react';
-import { useStore } from '@/context/StoreContext';
-import { useToast } from '@/context/ToastContext';
-import { Button } from '@/components/ui/Button';
+import { ArrowRight, CalendarDays, Clock, Database, FlaskConical, Gem, Goal, ShieldCheck, Star, Target, Trophy } from 'lucide-react';
+import { useData } from '@/context/DataContext';
+import { usePrefs } from '@/context/PrefsContext';
+import { useUserData } from '@/context/UserDataContext';
+import { computeStats } from '@/lib/user/stats';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { StatCard } from '@/components/dashboard/StatCard';
-import { AssignmentItem } from '@/components/assignments/AssignmentItem';
-import { AssignmentFormModal } from '@/components/assignments/AssignmentFormModal';
-import { SessionItem } from '@/components/planning/SessionItem';
-import { upcomingSessions } from './PlanningPage';
-import { addDays, daysUntil, formatLongDate, formatShortDay, startOfWeek, toISODate, todayISO } from '@/lib/dates';
-import type { WeeklyPoint } from '@/components/dashboard/WeeklyChart';
+import { DataNotice, DataToolbar, LoadingCards } from '@/components/match/parts';
+import { bestValue, MatchCard } from '@/components/match/MatchCard';
+import { pct, relativeTime } from '@/lib/format';
+import { cn } from '@/lib/cn';
+import type { Prediction } from '@/lib/model/poisson';
+import type { Match } from '@/types';
 
-const WeeklyChart = lazy(() => import('@/components/dashboard/WeeklyChart'));
+const UPCOMING = new Set(['SCHEDULED', 'TIMED', 'IN_PLAY', 'PAUSED']);
 
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 5 || h >= 18) return 'Bonsoir';
-  return 'Bonjour';
+function StatTile({ icon: Icon, label, value, hint, tone = 'default' }: { icon: typeof Target; label: string; value: ReactNode; hint?: ReactNode; tone?: 'default' | 'brand' | 'warn' }) {
+  return (
+    <div className="card relative overflow-hidden p-4">
+      <div className={cn('mb-3 inline-grid h-9 w-9 place-items-center rounded-xl', tone === 'brand' ? 'bg-brand-500/15 text-brand-700 dark:text-brand-400' : tone === 'warn' ? 'bg-amber-500/15 text-amber-600' : 'bg-elevated text-muted')}>
+        <Icon className="h-[18px] w-[18px]" aria-hidden />
+      </div>
+      <p className="text-xs font-medium text-muted">{label}</p>
+      <p className="mt-0.5 text-2xl font-bold tracking-tight tabular-nums">{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+    </div>
+  );
+}
+
+function Section({ title, link, children }: { title: string; link?: { to: string; label: string }; children: ReactNode }) {
+  return (
+    <section>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <h2 className="text-base font-semibold">{title}</h2>
+        {link && (
+          <Link to={link.to} className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">
+            {link.label} <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** Fiabilité des données : nombre moyen de matchs observés par équipe. */
+function reliability(trainingMatches: number, teams: number) {
+  const perTeam = teams ? (2 * trainingMatches) / teams : 0;
+  if (perTeam >= 15) return { label: 'Élevée', perTeam };
+  if (perTeam >= 6) return { label: 'Moyenne', perTeam };
+  return { label: 'Faible', perTeam };
 }
 
 export function DashboardPage() {
-  const { assignments, sessions, preferences, toggleAssignment, toggleSession } = useStore();
-  const { notify } = useToast();
-  const [formOpen, setFormOpen] = useState(false);
+  const { dataset, model, loading, predictMatch } = useData();
+  const { odds, preferences } = usePrefs();
+  const { data: user } = useUserData();
+  const pickStats = useMemo(() => computeStats(user.picks), [user.picks]);
 
-  const todo = assignments.filter((a) => a.status === 'todo');
-  const doneCount = assignments.length - todo.length;
-  const overdueCount = todo.filter((a) => daysUntil(a.dueDate) < 0).length;
-  const deadlines = [...todo].sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 5);
-  const nextSessions = upcomingSessions(sessions, 3);
+  const upcoming = useMemo(() => {
+    if (!dataset) return [];
+    const now = Date.now();
+    return dataset.matches
+      .filter((m) => UPCOMING.has(m.status) && Date.parse(m.utcDate) > now - 3 * 3_600_000)
+      .map((m) => ({ match: m, p: predictMatch(m) }))
+      .filter((x): x is { match: Match; p: Prediction } => x.p != null);
+  }, [dataset, predictMatch]);
 
-  const week = useMemo(() => {
-    const start = startOfWeek(new Date());
-    const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
-    const data: WeeklyPoint[] = days.map((d) => {
-      const iso = toISODate(d);
-      return {
-        day: formatShortDay(d),
-        devoirs: assignments.filter((a) => a.completedAt && toISODate(new Date(a.completedAt)) === iso).length,
-        sessions: sessions.filter((s) => s.done && s.date === iso).length,
-      };
-    });
-    const startISO = toISODate(start);
-    const endISO = toISODate(days[6]);
-    const dueThisWeek = assignments.filter((a) => a.dueDate >= startISO && a.dueDate <= endISO);
-    const plannedThisWeek = sessions.filter((s) => s.date >= startISO && s.date <= endISO);
-    return {
-      data,
-      totalDone: data.reduce((t, p) => t + p.devoirs + p.sessions, 0),
-      dueThisWeek: dueThisWeek.length,
-      dueDone: dueThisWeek.filter((a) => a.status === 'done').length,
-      planned: plannedThisWeek.length,
-      plannedDone: plannedThisWeek.filter((s) => s.done).length,
-    };
-  }, [assignments, sessions]);
-
-  const name = preferences.studentName.trim().split(/\s+/)[0];
-  const pct = (a: number, b: number) => (b === 0 ? null : Math.round((a / b) * 100));
-  const duePct = pct(week.dueDone, week.dueThisWeek);
-  const sessionPct = pct(week.plannedDone, week.planned);
+  const week = upcoming.filter(({ match }) => Date.parse(match.utcDate) < Date.now() + 7 * 86_400_000);
+  const values = upcoming.filter(({ match, p }) => (bestValue(match, p, odds)?.ev ?? -1) * 100 >= preferences.minEdge);
+  const clearest = [...week].sort((a, b) => Math.max(b.p.home, b.p.away) - Math.max(a.p.home, a.p.away)).slice(0, 4);
+  const goals = [...week].sort((a, b) => b.p.over25 - a.p.over25).slice(0, 4);
+  const rel = model ? reliability(model.trainingMatches, model.teams.size) : null;
 
   return (
     <>
-      <section className="relative mb-6 overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-brand-600/20 via-surface to-electric-600/15 p-6 sm:p-8">
-        <div aria-hidden className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand-500/20 blur-3xl" />
-        <p className="text-sm text-muted">{formatLongDate(todayISO())}</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-4xl">
-          {greeting()}{name ? <>, <span className="gradient-text">{name}</span></> : ''} 👋
-        </h1>
-        <p className="mt-2 max-w-xl text-sm text-muted sm:text-base">
-          {todo.length === 0
-            ? assignments.length === 0
-              ? 'Bienvenue sur StudyMate AI. Commencez par ajouter vos devoirs pour garder le contrôle de vos échéances.'
-              : 'Tous vos devoirs sont terminés. Profitez-en pour avancer vos révisions !'
-            : `Vous avez ${todo.length} devoir${todo.length > 1 ? 's' : ''} en cours${overdueCount ? `, dont ${overdueCount} en retard` : ''}.`}
-        </p>
-        <div className="relative mt-5 flex flex-wrap gap-2">
-          <Button onClick={() => setFormOpen(true)}><Plus className="h-4 w-4" aria-hidden />Nouveau devoir</Button>
-          <Link to="/planning" className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-elevated/70 px-4 text-sm font-medium transition hover:border-brand-500/50">
-            <CalendarCheck className="h-4 w-4" aria-hidden />Planifier une révision
-          </Link>
-          {!name && (
-            <Link to="/parametres" className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-medium text-muted transition hover:bg-elevated hover:text-fg">
-              <UserRound className="h-4 w-4" aria-hidden />Indiquer mon prénom
-            </Link>
+      <PageHeader
+        title="Tableau de bord"
+        description={dataset ? `${dataset.competition.name} · ${dataset.competition.country}` : 'Chargement…'}
+        actions={<DataToolbar />}
+      />
+      <DataNotice />
+
+      {loading && !dataset ? (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton h-32" />)}</div>
+          <LoadingCards />
+        </div>
+      ) : (
+        <div className="space-y-8">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatTile icon={CalendarDays} label="Matchs sur 7 jours" value={week.length} hint={`${upcoming.length} à venir au total`} />
+            <StatTile
+              icon={Gem}
+              label="Value bets détectés"
+              value={values.length}
+              tone={values.length ? 'brand' : 'default'}
+              hint={values.length ? `Espérance ≥ +${preferences.minEdge} %` : 'Saisissez des cotes sur un match'}
+            />
+            <StatTile
+              icon={ShieldCheck}
+              label="Fiabilité des données"
+              value={dataset?.source === 'demo' ? 'Démo' : (rel?.label ?? '—')}
+              tone={dataset?.source === 'demo' || rel?.label === 'Faible' ? 'warn' : 'brand'}
+              hint={rel ? `${model!.trainingMatches} matchs analysés · ≈ ${Math.round(rel.perTeam)} par équipe` : undefined}
+            />
+            <StatTile
+              icon={dataset?.source === 'api' ? Database : FlaskConical}
+              label="Dernière mise à jour"
+              value={<span className="text-lg">{dataset ? relativeTime(dataset.fetchedAt) : '—'}</span>}
+              tone={dataset?.source === 'api' ? 'default' : 'warn'}
+              hint={dataset?.source === 'api' ? 'Source : football-data.org' : 'Données de démonstration fictives'}
+            />
+          </div>
+
+          {upcoming.length === 0 ? (
+            <EmptyState icon={CalendarDays} title="Aucun match à venir" description="La saison est peut-être terminée ou en trêve. Essayez une autre compétition." />
+          ) : (
+            <>
+              <Section title="Mon suivi" link={{ to: '/paris', label: 'Mes pronostics' }}>
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <StatTile icon={Star} label="Matchs sauvegardés" value={user.bookmarks.length} hint={<Link to="/favoris" className="hover:underline">Voir mes favoris</Link>} />
+                  <StatTile icon={Clock} label="Pronostics en attente" value={pickStats.byStatus.pending} />
+                  <StatTile
+                    icon={Trophy}
+                    label="Taux de réussite"
+                    value={pickStats.hitRate == null ? '—' : pct(pickStats.hitRate)}
+                    tone={pickStats.hitRate == null ? 'default' : 'brand'}
+                    hint={pickStats.hitRate == null ? 'Aucun pronostic réglé' : `${pickStats.byStatus.won} gagnés / ${pickStats.byStatus.won + pickStats.byStatus.lost} réglés`}
+                  />
+                  <StatTile icon={Target} label="Gain net" value={`${pickStats.units > 0 ? '+' : ''}${pickStats.units.toFixed(2).replace('.', ',')} u`} hint="1 unité par pronostic réglé" />
+                </div>
+              </Section>
+
+              <Section title="Prochains matchs" link={{ to: '/matchs', label: 'Tous les matchs' }}>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {upcoming.slice(0, 4).map(({ match, p }) => <MatchCard key={match.id} match={match} prediction={p} showDate />)}
+                </div>
+              </Section>
+
+              {clearest.length > 0 && (
+                <Section title="Les plus nets selon le modèle (7 jours)">
+                  <p className="-mt-2 mb-3 text-xs text-muted">Classés par probabilité de victoire la plus élevée. Une probabilité n'est jamais une garantie.</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {clearest.map(({ match, p }) => <MatchCard key={match.id} match={match} prediction={p} showDate />)}
+                  </div>
+                </Section>
+              )}
+
+              {goals.length > 0 && (
+                <Section title="Matchs à buts attendus (7 jours)">
+                  <ul className="card divide-y divide-line">
+                    {goals.map(({ match, p }) => (
+                      <li key={match.id}>
+                        <Link to={`/match/${match.id}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-elevated/60">
+                          <Goal className="h-4 w-4 shrink-0 text-brand-700 dark:text-brand-400" aria-hidden />
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium">{match.home.shortName} – {match.away.shortName}</span>
+                          <span className="text-xs text-muted">+2,5 buts</span>
+                          <span className="w-12 text-right text-sm font-semibold tabular-nums">{pct(p.over25)}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              )}
+            </>
           )}
         </div>
-      </section>
-
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Devoirs en cours" value={todo.length} icon={ClipboardList} tone="violet" to="/devoirs?statut=todo" />
-        <StatCard label="Devoirs terminés" value={doneCount} icon={CheckCircle2} tone="green" to="/devoirs?statut=done" />
-        <StatCard label="En retard" value={overdueCount} icon={AlertTriangle} tone="red" to="/devoirs?statut=overdue" />
-        <StatCard label="Sessions à venir" value={upcomingSessions(sessions, Infinity).length} icon={Clock3} tone="blue" to="/planning" />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-5">
-        <section className="card p-5 lg:col-span-3" aria-labelledby="progress-title">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h2 id="progress-title" className="font-semibold">Progression de la semaine</h2>
-              <p className="text-xs text-muted">Calculée uniquement à partir de vos devoirs et sessions.</p>
-            </div>
-            <div className="flex gap-4 text-right text-xs text-muted">
-              <div>
-                <p className="text-lg font-bold text-fg">{duePct === null ? '—' : `${duePct} %`}</p>
-                <p>échéances de la semaine faites ({week.dueDone}/{week.dueThisWeek})</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-fg">{sessionPct === null ? '—' : `${sessionPct} %`}</p>
-                <p>sessions réalisées ({week.plannedDone}/{week.planned})</p>
-              </div>
-            </div>
-          </div>
-          {week.totalDone === 0 ? (
-            <div className="grid h-64 place-items-center rounded-xl border border-dashed border-line text-center">
-              <p className="max-w-xs text-sm text-muted">Le graphique se remplira dès que vous terminerez un devoir ou une session de révision cette semaine.</p>
-            </div>
-          ) : (
-            <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-elevated/60" />}>
-              <WeeklyChart data={week.data} />
-            </Suspense>
-          )}
-        </section>
-
-        <section className="card p-5 lg:col-span-2" aria-labelledby="deadlines-title">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 id="deadlines-title" className="font-semibold">Prochaines échéances</h2>
-            <Link to="/devoirs" className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-brand-400 hover:bg-brand-500/10">
-              Tout voir <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-          </div>
-          {deadlines.length ? (
-            <ul className="grid gap-2">
-              {deadlines.map((a) => (
-                <AssignmentItem key={a.id} compact assignment={a} onToggle={() => { toggleAssignment(a.id); notify('Bravo, devoir terminé !'); }} />
-              ))}
-            </ul>
-          ) : (
-            <EmptyState
-              icon={ClipboardList}
-              title="Aucune échéance"
-              description="Ajoutez un devoir pour le voir apparaître ici."
-              action={<Button size="sm" onClick={() => setFormOpen(true)}><Plus className="h-4 w-4" aria-hidden />Ajouter</Button>}
-            />
-          )}
-        </section>
-
-        <section className="card p-5 lg:col-span-3" aria-labelledby="sessions-title">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 id="sessions-title" className="font-semibold">Prochaines sessions de révision</h2>
-            <Link to="/planning" className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-brand-400 hover:bg-brand-500/10">
-              Planning <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-          </div>
-          {nextSessions.length ? (
-            <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {nextSessions.map((s) => <SessionItem key={s.id} session={s} showDate onToggle={() => { toggleSession(s.id); notify('Session terminée, bien joué !'); }} />)}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted">Aucune session prévue. <Link to="/planning" className="font-medium text-brand-400 hover:underline">Créer un planning</Link></p>
-          )}
-        </section>
-
-        <Link to="/assistant" className="card card-hover group flex items-center gap-4 p-5 lg:col-span-2">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-500 to-electric-500 shadow-glow">
-            <Sparkles className="h-6 w-6 text-white" aria-hidden />
-          </span>
-          <span className="flex-1">
-            <span className="block font-semibold">Assistant d'étude</span>
-            <span className="block text-sm text-muted">Résumés, fiches de révision et quiz à partir de vos notes.</span>
-          </span>
-          <ArrowRight className="h-5 w-5 text-muted transition group-hover:translate-x-1 group-hover:text-brand-400" aria-hidden />
-        </Link>
-      </div>
-
-      <AssignmentFormModal open={formOpen} onClose={() => setFormOpen(false)} />
+      )}
     </>
   );
 }

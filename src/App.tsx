@@ -1,35 +1,47 @@
 import { BrowserRouter, HashRouter, Route, Routes } from 'react-router-dom';
+import { PrefsProvider } from '@/context/PrefsContext';
+import { DataProvider } from '@/context/DataContext';
+import { ToastProvider } from '@/context/ToastContext';
+import { UserDataProvider } from '@/context/UserDataContext';
+import { MatchSync } from '@/components/user/MatchSync';
+import { FavoritesPage } from '@/pages/FavoritesPage';
+import { PicksPage } from '@/pages/PicksPage';
+import { Layout } from '@/components/layout/Layout';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { MatchesPage } from '@/pages/MatchesPage';
+import { MatchPage } from '@/pages/MatchPage';
+import { TeamsPage } from '@/pages/TeamsPage';
+import { PerformancePage } from '@/pages/PerformancePage';
+import { SettingsPage } from '@/pages/SettingsPage';
+import { NotFoundPage } from '@/pages/NotFoundPage';
 
 // En mode fichier unique (aperçu hébergé sans serveur), les routes passent par le # de l'URL.
 const Router = import.meta.env.MODE === 'artifact' ? HashRouter : BrowserRouter;
-import { StoreProvider } from '@/context/StoreContext';
-import { ToastProvider } from '@/context/ToastContext';
-import { Layout } from '@/components/layout/Layout';
-import { DashboardPage } from '@/pages/DashboardPage';
-import { AssignmentsPage } from '@/pages/AssignmentsPage';
-import { PlanningPage } from '@/pages/PlanningPage';
-import { NotesPage } from '@/pages/NotesPage';
-import { AssistantPage } from '@/pages/AssistantPage';
-import { SettingsPage } from '@/pages/SettingsPage';
-import { NotFoundPage } from '@/pages/NotFoundPage';
 
 export default function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ToastProvider>
-        <StoreProvider>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="devoirs" element={<AssignmentsPage />} />
-              <Route path="planning" element={<PlanningPage />} />
-              <Route path="notes" element={<NotesPage />} />
-              <Route path="assistant" element={<AssistantPage />} />
-              <Route path="parametres" element={<SettingsPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Route>
-          </Routes>
-        </StoreProvider>
+        <PrefsProvider>
+          <DataProvider>
+            <UserDataProvider>
+              <MatchSync />
+              <Routes>
+                <Route element={<Layout />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route path="matchs" element={<MatchesPage />} />
+                  <Route path="favoris" element={<FavoritesPage />} />
+                  <Route path="paris" element={<PicksPage />} />
+                  <Route path="match/:id" element={<MatchPage />} />
+                  <Route path="equipes" element={<TeamsPage />} />
+                  <Route path="performance" element={<PerformancePage />} />
+                  <Route path="parametres" element={<SettingsPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
+              </Routes>
+            </UserDataProvider>
+          </DataProvider>
+        </PrefsProvider>
       </ToastProvider>
     </Router>
   );
