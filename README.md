@@ -57,6 +57,8 @@ Sans configuration, tout est enregistré **dans le navigateur**. Pour des **comp
 
 Dans les deux cas, le serveur reconstruit lui-même le contexte (match, résultats récents, probabilités du modèle) depuis football-data.org : le navigateur n'envoie qu'un identifiant. Une analyse réussie est mise en cache 6 h (CDN Vercel et navigateur). Sur un site public, n'importe quel visiteur peut lancer des analyses : fixez une limite de dépenses chez le fournisseur.
 
+**Modifier l'intégration Claude avec Claude Code :** le projet active le skill open source `claude-api` (références d'API, documentation des SDK et bonnes pratiques pour huit langages), livré avec Claude Code et installé depuis [`anthropics/skills`](https://github.com/anthropics/skills) par `.claude/settings.json`. Il évite d'écrire des appels d'API d'après une documentation périmée. Les consignes sont dans `CLAUDE.md`.
+
 ## Lancer le projet
 
 Prérequis : **Node.js 18+**.
