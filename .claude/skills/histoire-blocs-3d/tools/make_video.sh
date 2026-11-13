@@ -15,7 +15,7 @@ node "$SK/engine/render.mjs" --ep . --w "$W" --h "$H" --workers "$WK" --chunk 5 
 # agrandissement 1080x1920 + niveau -14 LUFS
 ffmpeg -v error -y -i raw.mp4 -i mix.wav -map 0:v:0 -map 1:a:0 \
   -vf "scale=1080:1920:flags=lanczos" -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p \
-  -af "loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.84:level=false" -ar 48000 -c:a aac -b:a 192k -shortest -movflags +faststart final.mp4
+  -af "loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000,alimiter=limit=0.8:level=false" -ar 48000 -c:a aac -b:a 192k -shortest -movflags +faststart final.mp4
 python3 "$SK/tools/qa.py" final.mp4
 rm -rf raw.mp4.parts
 echo "-> $EP/final.mp4"
