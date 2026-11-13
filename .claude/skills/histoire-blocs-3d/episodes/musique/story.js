@@ -76,7 +76,7 @@ export default async function story({ kit, THREE, scene, camera, renderer, at })
   // étincelles des enceintes des gardes sous la pluie
   const shortGuards = [0, 3, 6, 8].filter((i) => guards[i]).map((i, k) => {
     const g = guards[i]; const wp = g.ch.root.position.clone().add(V(0, 1.2, 0)).add(V(-Math.sin(-g.ch.root.rotation.y), 0, Math.cos(g.ch.root.rotation.y)).multiplyScalar(0.35));
-    return { g, sp: kit.burst(scene, wp, { n: 50, size: 0.08, seed: 30 + k, color: '#bfe6ff' }), t0: T.shorting + k * 0.55 };
+    return { g, sp: kit.burst(scene, wp, { n: 70, size: 0.1, seed: 30 + k, color: '#bfe6ff', smoke: false }), t0: T.shorting + k * 0.55 };
   });
 
   // civils (flashback)
@@ -136,6 +136,13 @@ export default async function story({ kit, THREE, scene, camera, renderer, at })
   };
 
   // ---------- état du monde ----------
+  // enveloppes d'animation : sursaut (montée rapide, retombée), parole, hochement au rythme
+  const flinchAt = (t, t0, dur = 1.1) => { const d = t - t0; return d < 0 || d > dur ? 0 : d < 0.12 ? d / 0.12 : 1 - smooth((d - 0.12) / (dur - 0.12)); };
+  const flinch = (t, k = 1) => Math.max(flinchAt(t, T.explode), flinchAt(t, T.thunder, 0.9), flinchAt(t, T.scream, 0.6) * 0.4) * k;
+  const win = (t, a, b, f = 0.15) => clamp(Math.min((t - a) / f, (b - t) / f));
+  const dadTalk = (t) => Math.max(win(t, T.relax, T.radio - 0.4), win(t, T.scream, T.police - 0.3), win(t, T.whisper, T.end));
+  const groove = (t) => (t < T.explode ? beat(t) : 0);
+
   function update(t) {
     const present = isPresent(t), day = isDay(t) ? 1 : 0;
     // jour / nuit
@@ -169,17 +176,19 @@ export default async function story({ kit, THREE, scene, camera, renderer, at })
     // monstre
     M.root.visible = true;
     let mp = { crouch: 0, lean: 0.15, eyes: 0, headPitch: 0.25 };
-    if (t >= T.flashback && t < T.disappeared) { mp = { crouch: 0.2, lean: 0.35, armL: [-0.6, -0.5], armR: [-0.9, -0.3], eyes: 1, headPitch: 0.1, twitch: t }; }
+    if (t >= T.flashback && t < T.disappeared) { mp = { crouch: 0.15, lean: 0.35, armL: [-0.6, -0.5], armR: [-0.9, -0.3], eyes: 1, headPitch: 0.1, twitch: t, walk: (t - T.flashback) * 0.55 }; }
     else if (t >= T.disappeared && t < T.morning) M.root.visible = false;
     else if (day) { mp = { crouch: 0.25, lean: 0.4, armR: [-1.2, -0.4], armL: [-0.4, -0.3], eyes: t < T.froze ? 0.6 : 0, headPitch: 0.2, headYaw: 0.3 }; }
     else if (t >= T.silentTowers) mp.eyes = 0.3 + 0.2 * Math.sin(t * 3);
-    if (t >= T.quiet && t < T.turned) mp = { ...mp, eyes: 1, twitch: t, headTilt: 0.3 };
+    if (t >= T.quiet && t < T.turned) mp = { ...mp, eyes: 1, twitch: t, headTilt: 0.3, jerk: t, crouch: 0.15 * ramp(t, T.quiet, T.creaking) };
     M.root.position.set(0, 0, 0); M.root.rotation.y = 0;
+    if (t >= T.flashback && t < T.disappeared) M.root.position.set(0, 0, lerp(-6, 3, ramp(t, T.flashback, T.disappeared)));
+    if (t >= T.quiet && t < T.turned) M.root.position.set(0.6 * ramp(t, T.creaking, T.turned), 0, 2.5 * smooth(ramp(t, T.creaking, T.turned)));
     if (t >= T.turned && t < T.behind) M.root.visible = false;
     if (t >= T.behind) {
       M.root.position.set(2.4, 0, 18.6); M.root.rotation.y = Math.PI;
       const h = ramp(t, T.hand, T.hand + 1.4);
-      mp = { crouch: 0.35, lean: 0.55, eyes: 1, headPitch: 0.45, armL: [-0.3, -0.3], armR: [lerp(-0.2, -2.3, smooth(h)), lerp(-0.2, -0.9, smooth(h))], curl: lerp(0.2, 0.7, h), twitch: t * 0.3 };
+      mp = { crouch: 0.35, lean: 0.55, eyes: 1, headPitch: 0.45, armL: [-0.3, -0.3], armR: [lerp(-0.2, -2.3, smooth(h)), lerp(-0.2, -0.9, smooth(h))], curl: lerp(0.2, 0.7, h), twitch: t * 0.3, breathe: t };
     }
     M.pose(mp);
     // papa + moi
@@ -191,11 +200,14 @@ export default async function story({ kit, THREE, scene, camera, renderer, at })
     radio.visible = t >= T.radio - 0.2 && t < T.police;
     const dadArmL = phone.visible ? [-1.1, -0.25] : radio.visible ? [-1.9, -0.35] : t >= T.five - 0.3 && t < T.radio ? [-1.5, -0.6] : [0, 0];
     const dadArmR = t >= T.scream && t < T.police ? [-2.6, 0] : [-0.9, 0];
-    pose(dad, { expr: dadExpr, armL: dadArmL, armR: dadArmR, headPitch: phone.visible || radio.visible ? 0.35 : 0, headYaw: t >= T.whisper ? -0.4 : 0, lean: t >= T.scream && t < T.police ? -0.1 : 0 });
+    const busy = phone.visible || radio.visible;
+    pose(dad, { expr: dadExpr, armL: dadArmL, armR: dadArmR, headPitch: busy ? 0.35 : 0, headYaw: t >= T.whisper ? -0.4 : 0, lean: t >= T.scream && t < T.police ? -0.1 : 0,
+      time: t, phase: 0.3, idle: busy ? 0.3 : 1, talk: busy ? 0 : dadTalk(t), nod: groove(t) * 0.35, flinch: flinch(t) });
     dadBox.userData.led.material.emissiveIntensity = dadOn(t) ? 2 : 0;
     dadBox.userData.cones.forEach((c) => { c.scale.y = 1 + 0.3 * b * dadOn(t); });
     const kidUp = t >= T.mine - 0.2 && t < T.battery + 0.8;
-    pose(kid, { expr: kidExpr, armR: kidUp ? [-2.9, 0.1] : [-0.9, 0], armL: [0, 0], headPitch: kidUp ? -0.4 : 0, headYaw: t >= T.behind ? -0.5 : 0 });
+    pose(kid, { expr: kidExpr, armR: kidUp ? [-2.9, 0.1] : [-0.9, 0], armL: [0, 0], headPitch: kidUp ? -0.4 : 0, headYaw: t >= T.behind ? -0.5 : 0,
+      time: t, phase: 1.7, idle: kidUp ? 0.4 : 1, nod: groove(t) * 0.8, flinch: kidUp ? 0 : flinch(t), bob: groove(t) * 0.02 });
     const battShot = t >= at('and', 8) - 0.05 && t < T.quiet - 0.1;
     battBox.visible = battShot; batt1.visible = battShot && t < T.died - 0.15; batt0.visible = battShot && t >= T.died - 0.15;
     battBox.userData.led.material.emissiveIntensity = t < T.died - 0.15 ? 2 : 0;
@@ -207,7 +219,10 @@ export default async function story({ kit, THREE, scene, camera, renderer, at })
       g.ch.root.visible = present;
       const on = guardsOn(t) > 0.5 || (t < T.shorting + g.i * 0.2);
       g.box.userData.led.material.emissiveIntensity = on ? 2 : 0;
-      pose(g.ch, { armR: [-0.9, 0], armL: [0, 0], expr: t > T.thunder ? 'scared' : g.ch.expr, headPitch: -0.1 });
+      const sg = shortGuards.find((x) => x.g === g); const zap = sg ? flinchAt(t, sg.t0, 1.4) : 0;
+      g.base ||= g.ch.expr;
+      pose(g.ch, { armR: [-0.9 + 0.5 * zap, 0], armL: [0, 0], expr: zap > 0.1 ? 'shock' : t > T.thunder ? 'scared' : g.base, headPitch: -0.1 + 0.45 * zap,
+        time: t, phase: g.i * 1.37, idle: 1, nod: groove(t) * 0.5, flinch: Math.max(flinch(t, 0.9), zap * 0.5) });
     });
     shortGuards.forEach((s) => s.sp.update(t, s.t0));
     // flashback : civils qui fuient (apparition), gamin à la radio (matin)
@@ -217,14 +232,14 @@ export default async function story({ kit, THREE, scene, camera, renderer, at })
       const a = -0.5 + i * 0.22, d = 6 + (t - T.appeared) * 4.2 + (i % 3);
       c.root.position.set(Math.sin(a) * d + (i - 3) * 0.8, 0, 8 + Math.cos(a) * d * 0.9);
       c.root.rotation.y = a + 0.05;
-      pose(c, { walk: t * 2.4 + i * 0.3, walkAmt: 1.3, armL: [-0.3, 0.4], armR: [-0.3, 0.4], lean: 0.25, expr: 'scared' });
+      pose(c, { walk: t * 2.4 + i * 0.3, walkAmt: 1.3, armL: [-0.3, 0.4], armR: [-0.3, 0.4], lean: 0.25, expr: 'scared', time: t, phase: i, idle: 1, headYaw: Math.sin(t * 3 + i) * 0.5 });
     });
     bag.visible = shoe.visible = t >= T.disappeared - 0.3 && t < T.morning;
     radioKid.root.visible = day === 1;
     if (day) {
       const x = lerp(-9, 6, ramp(t, T.morning, T.present));
       radioKid.root.position.set(x, 0, 9.5); radioKid.root.rotation.y = Math.PI / 2;
-      pose(radioKid, { walk: t * 1.6, walkAmt: 0.8, armR: [-1.0, 0], expr: t < T.froze ? 'smile' : 'shock', headYaw: t > T.froze - 0.4 ? 0.9 : 0 });
+      pose(radioKid, { walk: t * 1.6, walkAmt: 0.8, armR: [-1.0, 0], expr: t < T.froze ? 'smile' : 'shock', headYaw: t > T.froze - 0.4 ? 0.9 : 0, time: t, nod: t < T.froze ? beat(t) * 0.7 : 0 });
     }
     // police
     cars.forEach((c, i) => {
@@ -291,7 +306,7 @@ export default async function story({ kit, THREE, scene, camera, renderer, at })
     { t: T.mine - 0.1, cam: (u) => { const b = kit.wpos(kidBox); return { pos: [KID.x + 0.2, lerp(0.9, 1.1, u), KID.z - lerp(3.0, 2.6, smooth(u))], look: [(b.x + KID.x) / 2, (b.y + 1.7) / 2, KID.z], fov: 54 }; } },
     { t: at('and', 8), cam: cam(BATT.clone().addScaledVector(KFWD, 1.3).add(V(0.12, 0.25, 0)).toArray(), BATT.clone().add(V(0, 0.16, 0)).toArray(), 36, 0.2) },
     // silence
-    { t: T.quiet - 0.1, cam: glide([0, 6, 30], [0, 6, 27], [0, 7, 0], [0, 8, 0], 50, 46) },
+    { t: T.quiet - 0.1, cam: glide([4.5, 5, 28], [4, 5.5, 24.5], [0, 7, 0], [0.5, 8, 1.5], 50, 46) },
     { t: T.creaking - 0.05, cam: (u) => { const h = kit.wpos(M.head, [0, 0.8, 0]); return { pos: [h.x + 1.2, h.y + 0.2, h.z + lerp(9, 7.5, smooth(u))], look: h.toArray(), fov: 30 }; } },
     { t: T.turned, cam: cam(DAD.clone().addScaledVector(FWD, 2.4).addScaledVector(RIGHT, -0.9).add(V(0, 1.4, 0)).toArray(), [DAD.x, 1.25, DAD.z], 40, 0.1) },
     { t: at('but'), cam: glide([0, 9, 24], [0, 8, 20], [0, 3, 0], [0, 3, 0], 48, 44) },

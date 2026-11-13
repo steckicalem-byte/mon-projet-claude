@@ -74,7 +74,7 @@ export function faceTex(expr = 'neutral', skin = '#f2c79a') {
       eye(L, EY, 13, 19); eye(R, EY, 13, 19);
       g.fillStyle = '#fff'; eye(L + 4, EY - 7, 4.5, 5.5); eye(R + 4, EY - 7, 4.5, 5.5); g.fillStyle = ink;
     }
-    if (expr === 'neutral' || expr === 'smile' || expr === 'smirk' || expr === 'whisper') { brow(L - 20, EY - 34, L + 16, EY - 36, 9); brow(R - 16, EY - 36, R + 20, EY - 34, 9); }
+    if (expr === 'neutral' || expr === 'smile' || expr === 'smirk' || expr === 'whisper' || expr === 'talk') { brow(L - 20, EY - 34, L + 16, EY - 36, 9); brow(R - 16, EY - 36, R + 20, EY - 34, 9); }
     if (expr === 'angry' || expr === 'shout') { brow(L - 26, EY - 42, L + 18, EY - 26, 13); brow(R + 26, EY - 42, R - 18, EY - 26, 13); }
     if (expr === 'worried' || expr === 'sad' || expr === 'scared') { brow(L - 22, EY - 26, L + 16, EY - 40, 8); brow(R + 22, EY - 26, R - 16, EY - 40, 8); }
     if (expr === 'shock') { brow(L - 20, EY - 46, L + 18, EY - 50, 8); brow(R + 20, EY - 46, R - 18, EY - 50, 8); }
@@ -89,6 +89,7 @@ export function faceTex(expr = 'neutral', skin = '#f2c79a') {
       case 'angry': g.fillStyle = '#fff'; g.fillRect(98, MY - 12, 60, 24); g.lineWidth = 5; g.strokeRect(98, MY - 12, 60, 24);
         for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(98 + i * 15, MY - 12); g.lineTo(98 + i * 15, MY + 12); g.stroke(); } break;
       case 'whisper': g.beginPath(); g.ellipse(128, MY, 10, 8, 0, 0, 7); g.fill(); break;
+      case 'talk': g.fillStyle = '#3a1418'; g.beginPath(); g.ellipse(128, MY - 2, 20, 13, 0, 0, 7); g.fill(); g.fillStyle = '#fff'; g.fillRect(112, MY - 13, 32, 5); break;
       case 'closed': g.beginPath(); g.moveTo(108, MY); g.lineTo(148, MY); g.stroke(); break;
       default: g.beginPath(); g.moveTo(110, MY); g.quadraticCurveTo(128, MY + 10, 146, MY); g.stroke();
     }
@@ -204,19 +205,55 @@ function hoodieTex(base, stripe) {
   });
 }
 
-// Pose d'un personnage. a = { walk, walkAmt, armL:[x,z], armR:[x,z], headYaw, headPitch, expr, lean, bob, crouch, yaw }
+// Pose d'un personnage. Les couches d'animation s'additionnent à la pose de base :
+// a = { walk, walkAmt, armL:[x,z], armR:[x,z], headYaw, headPitch, headRoll, expr, lean, bob, crouch, yaw,
+//       time: t (secondes), phase: décalage propre au perso,
+//       idle: 0..1   balancement, respiration, regard qui se promène (jamais de statue),
+//       talk: 0..1   bouche qui bouge + gestes des bras + tête qui accompagne,
+//       nod: 0..1    hochement de tête (ex. beat(t) quand la musique joue),
+//       flinch: 0..1 sursaut (accroupi, recul, bras qui protègent le visage) }
+const noise1 = (x) => Math.sin(x) * 0.6 + Math.sin(x * 2.13 + 1.7) * 0.3 + Math.sin(x * 4.37 + 0.4) * 0.1;
 export function pose(ch, a = {}) {
+  const t = a.time || 0, ph = a.phase || 0;
   const w = a.walk || 0, amt = a.walkAmt ?? (a.walk ? 1 : 0);
   const sw = Math.sin(w * Math.PI * 2) * 0.7 * amt;
+  let al = [...(a.armL || [0, 0])], ar = [...(a.armR || [0, 0])];
+  let hp = a.headPitch || 0, hy = a.headYaw || 0, hr = a.headRoll || 0;
+  let lean = a.lean || 0, roll = 0, bob = a.bob || 0, crouch = a.crouch || 0;
+  const idle = a.idle ?? 0;
+  if (idle) {
+    roll += Math.sin(t * 1.1 + ph) * 0.03 * idle;
+    bob += Math.sin(t * 2.2 + ph) * 0.008 * idle;
+    hy += noise1(t * 0.45 + ph * 3) * 0.22 * idle; hp += noise1(t * 0.31 + ph) * 0.06 * idle;
+    al[0] += Math.sin(t * 1.1 + ph) * 0.06 * idle; ar[0] -= Math.sin(t * 1.1 + ph + 0.5) * 0.06 * idle;
+    al[1] += 0.05 * idle; ar[1] += 0.05 * idle;
+  }
+  const nod = a.nod || 0;
+  if (nod) { hp += 0.16 * nod; bob -= 0.02 * nod; roll += Math.sin(t * 3.1 + ph) * 0.02; }
+  const talk = a.talk || 0;
+  if (talk) {
+    const g1 = Math.abs(noise1(t * 2.3 + ph)), g2 = Math.abs(noise1(t * 1.9 + ph + 2));
+    ar[0] += (-0.45 - 0.35 * g1) * talk; ar[1] += 0.15 * g1 * talk;
+    al[0] += (-0.25 - 0.3 * g2) * talk * 0.7;
+    hp += noise1(t * 3.3 + ph) * 0.07 * talk; hy += noise1(t * 1.4 + ph) * 0.1 * talk;
+  }
+  const fl = a.flinch || 0;
+  if (fl) {
+    crouch += 0.1 * fl; lean -= 0.18 * fl; hp += 0.2 * fl;
+    al = [al[0] + (-2.2 - al[0]) * fl, al[1] + (0.5 - al[1]) * fl];
+    ar = [ar[0] + (-2.2 - ar[0]) * fl, ar[1] + (0.5 - ar[1]) * fl];
+  }
   ch.legs[0].rotation.x = sw; ch.legs[1].rotation.x = -sw;
-  const al = a.armL || [0, 0], ar = a.armR || [0, 0];
   ch.arms[0].rotation.set(al[0] - sw * 0.9, 0, -(al[1] || 0));
   ch.arms[1].rotation.set(ar[0] + sw * 0.9, 0, ar[1] || 0);
-  ch.neck.rotation.set(a.headPitch || 0, a.headYaw || 0, a.headRoll || 0);
-  ch.body.rotation.x = a.lean || 0;
-  ch.body.position.y = Math.abs(Math.sin(w * Math.PI * 2)) * 0.05 * amt + (a.bob || 0) - (a.crouch || 0);
+  ch.neck.rotation.set(hp, hy, hr);
+  ch.body.rotation.set(lean, 0, roll);
+  ch.body.position.y = Math.abs(Math.sin(w * Math.PI * 2)) * 0.05 * amt + bob - crouch;
   if (a.yaw !== undefined) ch.root.rotation.y = a.yaw;
-  if (a.expr && a.expr !== ch.expr) { ch.expr = a.expr; ch.faceMat.map = faceTex(a.expr, ch.skin); ch.faceMat.needsUpdate = true; }
+  // bouche qui parle : alterne l'expression de base et une bouche ouverte
+  let expr = a.expr || ch.baseExpr || ch.expr;
+  if (talk && (noise1(t * 9 + ph) + 0.25 * Math.sin(t * 23)) > 0.05) expr = expr === 'whisper' ? 'talk' : expr === 'shout' ? 'shout' : 'talk';
+  if (expr !== ch.expr) { ch.expr = expr; ch.faceMat.map = faceTex(expr, ch.skin); ch.faceMat.needsUpdate = true; }
 }
 
 // ---------- accessoires ----------
@@ -298,7 +335,7 @@ export function lightCone(len = 20, radius = 5, color = '#fff2c8', opacity = 0.1
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
     uniforms: { color: { value: new THREE.Color(color) }, op: { value: opacity }, len: { value: len } },
     vertexShader: 'varying float d; varying float cz; varying vec3 n; varying vec3 vv; void main(){ d=-position.z; vec4 mv=modelViewMatrix*vec4(position,1.); cz=-mv.z; vv=normalize(-mv.xyz); n=normalize(normalMatrix*normal); gl_Position=projectionMatrix*mv; }',
-    fragmentShader: 'uniform vec3 color; uniform float op,len; varying float d; varying float cz; varying vec3 n; varying vec3 vv; void main(){ float f=1.-clamp(d/len,0.,1.); float e=pow(abs(dot(n,vv)),1.5); float near=smoothstep(3.,14.,cz); gl_FragColor=vec4(color*op*f*e*near,1.); }',
+    fragmentShader: 'uniform vec3 color; uniform float op,len; varying float d; varying float cz; varying vec3 n; varying vec3 vv; void main(){ float f=1.-clamp(d/len,0.,1.); float e=pow(abs(dot(n,vv)),1.5); float near=smoothstep(8.,26.,cz); gl_FragColor=vec4(color*op*f*e*near,1.); }',
   });
   return new THREE.Mesh(geo, m);
 }
@@ -594,17 +631,37 @@ export function monster(scene, o = {}) {
   const M = {
     root, body, legs, arms, neck, head, eyeM, eg, torso,
     // a = { crouch, lean, armL:[sh,el], armR:[sh,el], headTilt, headYaw, eyes:0..1, twitch:t, reach }
+    // a = { crouch, lean, armL:[sh,el], armR:[sh,el], headPitch, headYaw, headTilt, eyes, curl,
+    //       walk: phase (pas lourds), breathe: t (respiration lente), jerk: t (saccades violentes), twitch: t }
     pose(a = {}) {
       const c = a.crouch || 0;
-      legs.forEach((l) => { l.hip.rotation.x = -0.5 * c; l.knee.rotation.x = 1.0 * c; });
-      body.position.y = -1.3 * c * s;
-      torso.rotation.x = (a.lean ?? 0.15) + 0.35 * c;
-      const al = a.armL || [0.1, -0.15], ar = a.armR || [0.1, -0.15];
+      let lean = (a.lean ?? 0.15) + 0.35 * c, roll = 0, bodyY = -1.3 * c * s, hp = a.headPitch ?? 0.25, hy = a.headYaw || 0, ht = a.headTilt || 0;
+      const al = [...(a.armL || [0.1, -0.15])], ar = [...(a.armR || [0.1, -0.15])];
+      let hipL = -0.5 * c, hipR = -0.5 * c, kneeL = 1.0 * c, kneeR = 1.0 * c;
+      if (a.walk !== undefined) {
+        const w = a.walk * Math.PI * 2, st = Math.sin(w);
+        hipL += st * 0.45; hipR -= st * 0.45; kneeL += Math.max(0, -Math.cos(w)) * 0.7; kneeR += Math.max(0, Math.cos(w)) * 0.7;
+        al[0] -= st * 0.35; ar[0] += st * 0.35; roll += Math.sin(w) * 0.06; bodyY += -Math.abs(Math.cos(w)) * 0.25 * s; hy += Math.sin(w * 0.5) * 0.15;
+      }
+      if (a.breathe !== undefined) {
+        const b = Math.sin(a.breathe * 1.6);
+        lean += b * 0.03; bodyY += b * 0.08 * s; hp += Math.sin(a.breathe * 0.7) * 0.06; ht += Math.sin(a.breathe * 0.45) * 0.12;
+        al[0] += b * 0.04; ar[0] -= b * 0.03;
+      }
+      if (a.jerk !== undefined) {
+        const j = a.jerk, k = Math.floor(j * 7), r = (n) => Math.sin(k * 12.9898 + n * 78.233) * 43758.5453 % 1;
+        hy += r(1) * 0.6; ht += r(2) * 0.5; hp += r(3) * 0.3; lean += Math.abs(r(4)) * 0.25; roll += r(5) * 0.12;
+        al[0] += r(6) * 0.7; ar[0] += r(7) * 0.7; al[1] += r(8) * 0.5; ar[1] += r(9) * 0.5; hipL += r(10) * 0.3; kneeR += Math.abs(r(11)) * 0.5;
+      }
+      legs[0].hip.rotation.x = hipL; legs[1].hip.rotation.x = hipR; legs[0].knee.rotation.x = kneeL; legs[1].knee.rotation.x = kneeR;
+      body.position.y = bodyY; body.rotation.z = roll;
+      torso.rotation.x = lean;
       arms[0].sh.rotation.set(al[0], 0, -0.12); arms[0].el.rotation.x = al[1];
       arms[1].sh.rotation.set(ar[0], 0, 0.12); arms[1].el.rotation.x = ar[1];
       const tw = a.twitch ? Math.sin(a.twitch * 47) * Math.sin(a.twitch * 13) * 0.08 : 0;
-      neck.rotation.set((a.headPitch || 0.25) + tw, a.headYaw || 0, (a.headTilt || 0) + tw * 1.5);
-      arms.forEach((ar2) => ar2.fingers.forEach((f, i) => { f.rotation.x = (a.curl ?? 0.3) + i * 0.05; }));
+      neck.rotation.set(hp + tw, hy, ht + tw * 1.5);
+      const curl = a.curl ?? 0.3, ct = a.breathe !== undefined ? Math.sin(a.breathe * 2.3) * 0.15 : 0;
+      arms.forEach((ar2, side) => ar2.fingers.forEach((f, i) => { f.rotation.x = curl + i * 0.05 + ct * Math.sin(i + side); }));
       const e = a.eyes || 0; eyeM.emissiveIntensity = 4 * e; eg.forEach((g2) => { g2.material.opacity = 0.9 * e; });
     },
   };
@@ -679,7 +736,7 @@ export function burst(scene, pos, o = {}) {
   const flash = glow('#ffe0a0', 1, 0); flash.position.copy(pos); scene.add(flash);
   const light = new THREE.PointLight('#ffb35a', 0, 60, 1.6); light.position.copy(pos); scene.add(light);
   const smokeM = mat('#3b3d44', { transparent: true, opacity: 0, roughness: 1 });
-  const smoke = Array.from({ length: 10 }, (_, i) => { const b = box(1, 1, 1, smokeM, pos.x, pos.y, pos.z, scene); b.castShadow = false; b.userData.v = [(r() - 0.5) * 2, 1 + r() * 2, (r() - 0.5) * 2]; return b; });
+  const smoke = Array.from({ length: o.smoke === false ? 0 : 10 }, (_, i) => { const b = box(1, 1, 1, smokeM, pos.x, pos.y, pos.z, scene); b.castShadow = false; b.userData.v = [(r() - 0.5) * 2, 1 + r() * 2, (r() - 0.5) * 2]; return b; });
   return {
     update(t, t0) {
       const d = t - t0;

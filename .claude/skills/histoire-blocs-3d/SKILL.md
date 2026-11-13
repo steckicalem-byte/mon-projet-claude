@@ -122,6 +122,20 @@ Une 3D « plate » est rejetée. Le look attendu est celui d'une capture de jeu 
 - Les projecteurs des tours sont à 450 (au-delà, le monstre est « cramé » en blanc). Le faisceau s'efface quand la caméra est dedans.
 - Évite les vues aériennes pour montrer un objet précis (voiture, personne) : en 9:16 il disparaît. Préfère un plan bas qui suit l'objet.
 
+## Animation : personne n'est jamais figé (retour de l'utilisateur)
+Des personnages statiques sont rejetés. Chaque personnage visible reçoit à chaque image `time: t` et `phase`, avec au minimum `idle: 1`. Il y ajoute les couches qui collent à l'histoire (voir `pose()` dans le kit) :
+- `talk` : bouche qui bouge et gestes, sur **chaque réplique entre guillemets** (fenêtres calées sur les repères) ;
+- `nod: beat(t)` : hochement au rythme tant que la musique joue ;
+- `flinch` : sursaut sur chaque impact (explosion, tonnerre, cri) ;
+- `walk` : pour les passants et les foules.
+
+Le monstre bouge chaque fois que l'histoire dit qu'il peut bouger :
+- `walk` quand il attaque ;
+- `jerk` (saccades) pendant la défaillance ;
+- `breathe` quand il se révèle, avec les doigts qui se crispent.
+
+Gelé, il reste figé, mais ses yeux vivent. Vérifie le mouvement sur 3 images rapprochées (0,3 s d'écart) d'un même plan, pas sur une seule image.
+
 ## Leçons apprises (à respecter)
 - **En 9:16, le champ horizontal est minuscule.** À fov 42 vertical, l'horizontal ne fait que ~24°. Cadre toujours le sujet au centre ; un sujet décalé de 15° sort du cadre. Pour un sujet qui bouge, utilise `follow` ou une caméra calculée à partir de sa position.
 - **Objets tenus en main en gros plan** (horloge, radio, batterie) : ne les attache pas à la main. Pose une copie dans le monde, devant le personnage et face caméra (inserts `PHONE`, `RADIO`, `BATT` de l'épisode modèle). La référence triche pareil.
