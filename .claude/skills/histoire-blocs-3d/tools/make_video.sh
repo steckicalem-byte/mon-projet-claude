@@ -10,10 +10,12 @@ python3 "$SK/tools/align.py" "$VOICE" script.txt words.json
 node "$SK/engine/render.mjs" --ep . --cues cues.json
 python3 "$SK/tools/check_cues.py" cues.json words.json > cues_check.txt
 python3 "$SK/audio/soundtrack.py" cues.json sfx.json mix.wav --voice "$VOICE"
-node "$SK/engine/render.mjs" --ep . --w "$W" --h "$H" --workers "$WK" --out raw.mp4
+# reprenable : si la machine redémarre, relancer ce script saute les tranches déjà rendues (raw.mp4.parts/)
+node "$SK/engine/render.mjs" --ep . --w "$W" --h "$H" --workers "$WK" --chunk 5 --keepParts 1 --out raw.mp4
 # agrandissement 1080x1920 + niveau -14 LUFS
 ffmpeg -v error -y -i raw.mp4 -i mix.wav -map 0:v:0 -map 1:a:0 \
   -vf "scale=1080:1920:flags=lanczos" -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p \
   -af "loudnorm=I=-14:TP=-1.5:LRA=11" -ar 48000 -c:a aac -b:a 192k -shortest -movflags +faststart final.mp4
 python3 "$SK/tools/qa.py" final.mp4
+rm -rf raw.mp4.parts
 echo "-> $EP/final.mp4"

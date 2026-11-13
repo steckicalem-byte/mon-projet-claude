@@ -100,7 +100,9 @@ Une fois `voice.mp3` présent, lance `tools/make_video.sh <ep>`. Il enchaîne :
 5. agrandissement 1080×1920 + niveau -14 LUFS ;
 6. contrôle qualité.
 
-Temps : environ 1 image/s/worker en 720p avec SwiftShader (pas de GPU). Pour ~100 s, compte 30-45 min avec 2 workers. Lance-le en arrière-plan et suis la progression.
+Temps : ~0,7 image/s au total en 720p avec 3 workers et le look complet (SwiftShader, pas de GPU), soit ~70 min pour 100 s. Lance-le en arrière-plan (`run_in_background`) et suis la progression.
+
+Le conteneur peut redémarrer pendant un rendu long et tuer les tâches de fond. Le rendu est donc **découpé en tranches de 5 s** dans `raw.mp4.parts/`. Si une notification signale un redémarrage, relance la même commande : elle saute les tranches déjà finies. Ne lance jamais une chaîne `a && b &` dans un appel Bash classique, car tout part en arrière-plan sans sortie : utilise `run_in_background`.
 
 Ensuite :
 - regarde `final_qa/planche.jpg` ;

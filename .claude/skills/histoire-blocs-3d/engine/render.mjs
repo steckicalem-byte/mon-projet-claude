@@ -1,6 +1,6 @@
 // Rendu d'un épisode : Chromium (WebGL logiciel) → JPEG → ffmpeg.
 // node render.mjs --ep <dossier épisode> --out video.mp4 [--w 1080 --h 1920 --fps 30]
-//                 [--workers 2] [--from 0 --to <s>] [--stills 3.5,10,22 --stillsDir dir] [--audio mix.wav]
+//                 [--workers 2] [--chunk 5] [--from 0 --to <s>] [--stills 3.5,10,22 --stillsDir dir] [--audio mix.wav]
 // Le dossier épisode contient story.js, words.json et node_modules/ (three + @fontsource/lilita-one).
 import http from 'node:http';
 import fs from 'node:fs';
@@ -79,35 +79,42 @@ if (args.stills) {
 const probe = await launch(); const pp = await openPage(probe);
 const meta = await pp.evaluate(() => window.meta); await probe.close();
 const f0 = Math.round(+(args.from || 0) * FPS), f1 = Math.min(meta.frames, Math.round(+(args.to || meta.duration) * FPS));
-const total = f1 - f0;
-console.log(`durée ${meta.duration.toFixed(2)} s, images ${f0}→${f1} (${total}), ${WORKERS} workers, ${W}x${H}`);
-const outFile = path.resolve(args.out || path.join(EP, 'video.mp4'));
-const tmp = outFile + '.parts'; fs.mkdirSync(tmp, { recursive: true });
-const per = Math.ceil(total / WORKERS);
-let done = 0; const tStart = Date.now();
 
-async function worker(k) {
-  const a = f0 + k * per, b = Math.min(f1, a + per);
-  if (a >= b) return null;
-  const part = path.join(tmp, `part${k}.mp4`);
-  const ff = spawn('ffmpeg', ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-', '-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', part], { stdio: ['pipe', 'inherit', 'inherit'] });
+console.log(`durée ${meta.duration.toFixed(2)} s, images ${f0}→${f1} (${f1 - f0}), ${WORKERS} workers, ${W}x${H}`);
+const outFile = path.resolve(args.out || path.join(EP, 'video.mp4'));
+// Rendu par tranches reprenables : chaque tranche (CHUNK s) est écrite dans <out>.parts/ puis renommée.
+// Si le rendu est interrompu (redémarrage…), relancer la même commande saute les tranches déjà faites.
+const CHUNK = Math.max(1, Math.round(+(args.chunk || 5) * FPS));
+const tmp = outFile + '.parts'; fs.mkdirSync(tmp, { recursive: true });
+const chunks = []; for (let a = f0; a < f1; a += CHUNK) chunks.push([a, Math.min(f1, a + CHUNK)]);
+const name = ([a, b]) => path.join(tmp, `c${String(a).padStart(6, '0')}_${b}.mp4`);
+const todo = chunks.filter((c) => !fs.existsSync(name(c)));
+console.log(`${chunks.length} tranches, ${chunks.length - todo.length} déjà faites, ${todo.length} à rendre`);
+let done = 0; const total = todo.reduce((n, [a, b]) => n + b - a, 0); const tStart = Date.now();
+async function worker() {
   const br = await launch(); const page = await openPage(br);
-  for (let f = a; f < b; f++) {
-    const d = await page.evaluate((f) => window.renderFrame(f), f);
-    if (!ff.stdin.write(toBuf(d))) await new Promise((r) => ff.stdin.once('drain', r));
-    if (++done % 30 === 0) { const el = (Date.now() - tStart) / 1000; process.stdout.write(`\r${done}/${total} images — ${(done / el).toFixed(2)} img/s — reste ~${Math.round((total - done) / (done / el))} s   `); }
+  while (todo.length) {
+    const c = todo.shift(); const [a, b] = c;
+    const part = name(c), partTmp = part + '.tmp.mp4';
+    const ff = spawn('ffmpeg', ['-y', '-v', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-', '-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', partTmp], { stdio: ['pipe', 'inherit', 'inherit'] });
+    for (let f = a; f < b; f++) {
+      const d = await page.evaluate((f) => window.renderFrame(f), f);
+      if (!ff.stdin.write(toBuf(d))) await new Promise((r) => ff.stdin.once('drain', r));
+      if (++done % 30 === 0) { const el = (Date.now() - tStart) / 1000; process.stdout.write(`\r${done}/${total} images — ${(done / el).toFixed(2)} img/s — reste ~${Math.round((total - done) / (done / el))} s   `); }
+    }
+    ff.stdin.end(); const code = await new Promise((r) => ff.on('close', r));
+    if (code !== 0) throw new Error('ffmpeg a échoué sur la tranche ' + a);
+    fs.renameSync(partTmp, part);
   }
   await br.close();
-  ff.stdin.end(); await new Promise((r) => ff.on('close', r));
-  return part;
 }
-const parts = (await Promise.all(Array.from({ length: WORKERS }, (_, k) => worker(k)))).filter(Boolean);
+await Promise.all(Array.from({ length: Math.min(WORKERS, todo.length) }, () => worker()));
 console.log('\nassemblage…');
-fs.writeFileSync(path.join(tmp, 'list.txt'), parts.map((p) => `file '${p}'`).join('\n'));
+fs.writeFileSync(path.join(tmp, 'list.txt'), chunks.map((c) => `file '${name(c)}'`).join('\n'));
 const concatArgs = ['-y', '-v', 'error', '-f', 'concat', '-safe', '0', '-i', path.join(tmp, 'list.txt')];
 if (args.audio) concatArgs.push('-ss', String(f0 / FPS), '-i', path.resolve(args.audio), '-map', '0:v:0', '-map', '1:a:0', '-c:a', 'aac', '-b:a', '192k', '-shortest');
 concatArgs.push('-c:v', 'copy', '-movflags', '+faststart', outFile);
 execFileSync('ffmpeg', concatArgs, { stdio: 'inherit' });
-fs.rmSync(tmp, { recursive: true, force: true });
+if (!args.keepParts) fs.rmSync(tmp, { recursive: true, force: true });
 console.log('ok', outFile, `${((Date.now() - tStart) / 1000).toFixed(0)} s`);
 server.close();
