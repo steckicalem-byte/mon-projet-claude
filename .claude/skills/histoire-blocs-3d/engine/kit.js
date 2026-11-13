@@ -733,8 +733,8 @@ export function burst(scene, pos, o = {}) {
   const pm = new THREE.PointsMaterial({ color: o.color || '#ffc35a', size: o.size || 0.25, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
   const pts = new THREE.Points(geo, pm); pts.frustumCulled = false; scene.add(pts);
   const r = rng(o.seed || 5); const vel = Array.from({ length: n }, () => { const th = r() * Math.PI * 2, ph = Math.acos(2 * r() - 1), sp = 4 + r() * 10; return [Math.sin(ph) * Math.cos(th) * sp, Math.abs(Math.cos(ph)) * sp * 0.9 + 2, Math.sin(ph) * Math.sin(th) * sp]; });
-  const flash = glow('#ffe0a0', 1, 0); flash.position.copy(pos); scene.add(flash);
-  const light = new THREE.PointLight('#ffb35a', 0, 60, 1.6); light.position.copy(pos); scene.add(light);
+  const flash = glow('#ffe0a0', 1, 0); flash.position.copy(pos); if (o.flash !== false) scene.add(flash);
+  const light = new THREE.PointLight('#ffb35a', 0, 60, 1.6); light.position.copy(pos); if (o.flash !== false) scene.add(light);
   const smokeM = mat('#3b3d44', { transparent: true, opacity: 0, roughness: 1 });
   const smoke = Array.from({ length: o.smoke === false ? 0 : 10 }, (_, i) => { const b = box(1, 1, 1, smokeM, pos.x, pos.y, pos.z, scene); b.castShadow = false; b.userData.v = [(r() - 0.5) * 2, 1 + r() * 2, (r() - 0.5) * 2]; return b; });
   return {
@@ -795,4 +795,69 @@ export function drawCaption(ctx, W, H, word, age, o = {}) {
   ctx.fillStyle = o.color || (big ? '#ffe81f' : '#f4f04a');
   ctx.fillText(word, 0, 0);
   ctx.restore();
+}
+
+// ---------- action ----------
+// Position le long d'un chemin de points [[t, x, z], …] (interpolation douce entre points) ; renvoie {x, z, dir}
+export function pathAt(pts, t) {
+  if (t <= pts[0][0]) return { x: pts[0][1], z: pts[0][2], dir: Math.atan2(pts[1][1] - pts[0][1], pts[1][2] - pts[0][2]), moving: false };
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [t0, x0, z0] = pts[i], [t1, x1, z1] = pts[i + 1];
+    if (t <= t1) { const u = (t - t0) / Math.max(1e-6, t1 - t0); return { x: lerp(x0, x1, u), z: lerp(z0, z1, u), dir: Math.atan2(x1 - x0, z1 - z0), moving: true, seg: i, u }; }
+  }
+  const n = pts.length - 1; return { x: pts[n][1], z: pts[n][2], dir: Math.atan2(pts[n][1] - pts[n - 1][1], pts[n][2] - pts[n - 1][2]), moving: false };
+}
+
+// Camion de glaces avec gros haut-parleur et cornet géant sur le toit.
+export function iceCreamTruck(scene, pos, yaw = 0) {
+  const g = new THREE.Group(); g.position.copy(pos); g.rotation.y = yaw; scene.add(g);
+  const pink = mat('#f4a6c8', { roughness: 0.5 }), white = mat('#f6f3ee', { roughness: 0.5 }), dark = mat('#1a1c22', { roughness: 0.4 });
+  const sideTex = canvasTex(256, 128, (c, w, h) => {
+    c.fillStyle = '#f6f3ee'; c.fillRect(0, 0, w, h); c.fillStyle = '#f4a6c8'; c.fillRect(0, h * 0.62, w, h * 0.38);
+    for (let i = 0; i < 12; i++) { c.fillStyle = i % 2 ? '#7fd3f0' : '#f4a6c8'; c.beginPath(); c.arc(i * 24, h * 0.62, 12, 0, Math.PI); c.fill(); }
+    c.fillStyle = '#3b2a5a'; c.font = 'bold 30px "Lilita One", sans-serif'; c.textAlign = 'center'; c.fillText('ICE CREAM', w / 2, 40);
+  });
+  const sideM = new THREE.MeshStandardMaterial({ map: sideTex, roughness: 0.5 });
+  const body = rbox(2.3, 2.3, 3.6, white, 0, 1.6, -0.6, g, 0.12); body.material = [sideM, sideM, white, white, white, white];
+  rbox(2.25, 1.5, 1.8, pink, 0, 1.2, 2.0, g, 0.15);
+  const glassM = new THREE.MeshStandardMaterial({ color: '#2a3550', roughness: 0.1, metalness: 0.5 });
+  const wind = box(2.0, 0.8, 0.06, glassM, 0, 1.75, 2.9, g); wind.rotation.x = -0.25;
+  const sideWin = box(0.06, 0.6, 0.9, glassM, 1.14, 1.65, 1.9, g); // vitre conducteur (côté droit) : on la casse
+  box(0.06, 0.6, 0.9, glassM, -1.14, 1.65, 1.9, g);
+  box(0.06, 0.9, 1.6, dark, 1.16, 1.9, -0.6, g); // trappe de service
+  [[-1, 2.0], [1, 2.0], [-1, -1.5], [1, -1.5]].forEach(([x, z]) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.32, 18), dark); w.rotation.z = Math.PI / 2; w.position.set(x * 1.05, 0.42, z); g.add(w); });
+  const headM = new THREE.MeshStandardMaterial({ color: '#fff', emissive: '#fff6dd', emissiveIntensity: 0 });
+  box(0.4, 0.2, 0.05, headM, -0.75, 1.0, 2.92, g); box(0.4, 0.2, 0.05, headM, 0.75, 1.0, 2.92, g);
+  const hg = [-0.75, 0.75].map((x) => { const s = glow('#fff2d0', 2.2, 0); s.position.set(x, 1.0, 3.1); g.add(s); return s; });
+  // cornet géant + haut-parleur pavillon
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.3, 8), mat('#d9a35a', { roughness: 0.8 })); cone.rotation.x = Math.PI; cone.position.set(0, 3.45, -1.2); g.add(cone);
+  [['#f7c6d9', 0], ['#bfe7f5', 0.45]].forEach(([c, y]) => { const sp = new THREE.Mesh(new THREE.SphereGeometry(0.5, 14, 10), mat(c, { roughness: 0.6 })); sp.position.set(0, 4.2 + y, -1.2); g.add(sp); });
+  const horn = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.1, 20, 1, true), mat('#d8dbe2', { metalness: 0.7, roughness: 0.3, side: THREE.DoubleSide }));
+  horn.rotation.x = -Math.PI / 2; horn.position.set(0, 3.2, 0.6); g.add(horn);
+  const notes = [0, 1, 2].map((i) => { const s = glow('#ffe36b', 0.5, 0); g.add(s); return s; });
+  const winWorld = new THREE.Vector3(1.2, 1.65, 1.9).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw).add(pos);
+  const glass = burst(scene, winWorld, { n: 90, size: 0.06, seed: 77, color: '#cfe8ff', smoke: false, flash: false });
+  return {
+    group: g, sideWin, horn,
+    // engine 0/1 (phares), song 0/1 (pavillon qui pulse + notes), beat 0..1, t
+    set(engine, song, beat, t) {
+      headM.emissiveIntensity = 3 * engine; hg.forEach((s) => { s.material.opacity = 0.7 * engine; });
+      horn.scale.setScalar(1 + 0.12 * beat * song);
+      notes.forEach((n, i) => { const k = ((t * 0.8 + i / 3) % 1); n.material.opacity = song * (1 - k) * 0.9; n.position.set(Math.sin(t * 2 + i * 2) * 0.6, 3.3 + k * 2.2, 1.3 + k * 0.4); });
+      g.position.y = engine ? Math.sin(t * 40) * 0.008 : 0; // moteur qui tremble
+    },
+    smash(t, t0) { sideWin.visible = t < t0; glass.update(t, t0); },
+  };
+}
+
+// Éclair : segments brisés du ciel jusqu'à un point, visible quelques images
+export function lightning(scene, to, seed = 3) {
+  const r = rng(seed); const pts = []; let p = to.clone().add(new THREE.Vector3((r() - 0.5) * 10, 90, (r() - 0.5) * 10));
+  for (let i = 0; i <= 14; i++) { const u = i / 14; pts.push(new THREE.Vector3(lerp(p.x, to.x, u) + (i && i < 14 ? (r() - 0.5) * 5 : 0), lerp(p.y, to.y, u), lerp(p.z, to.z, u) + (i && i < 14 ? (r() - 0.5) * 5 : 0))); }
+  const g = new THREE.Group(); scene.add(g);
+  const m = new THREE.MeshBasicMaterial({ color: '#eaf2ff', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false });
+  for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1]; const len = a.distanceTo(b); const seg = new THREE.Mesh(new THREE.BoxGeometry(0.35, len, 0.35), m); seg.position.copy(a).add(b).multiplyScalar(0.5); seg.lookAt(b); seg.rotateX(Math.PI / 2); g.add(seg); }
+  const gl = glow('#cfe0ff', 14, 0); gl.position.copy(to); scene.add(gl);
+  const pl = new THREE.PointLight('#cfe0ff', 0, 120, 1.5); pl.position.copy(to).add(new THREE.Vector3(0, 6, 0)); scene.add(pl);
+  return { update(t, t0) { const d = t - t0; const on = d >= 0 && d < 0.35 ? (d < 0.1 || (d > 0.18 && d < 0.26) ? 1 : 0.25) : 0; m.opacity = on; gl.material.opacity = on * 0.9; pl.intensity = on * 3000; } };
 }
