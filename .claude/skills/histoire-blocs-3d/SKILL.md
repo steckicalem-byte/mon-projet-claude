@@ -142,6 +142,8 @@ Gelé, il reste figé, mais ses yeux vivent. Vérifie le mouvement sur 3 images 
 - La lune éclaire le dos des personnages qui regardent le monstre. La lumière d'appoint attachée à la caméra (dans `main.js`) garde les visages lisibles : ne la retire pas.
 - Une caméra qui part de l'extérieur de la place finit souvent dans un immeuble (anneau d'immeubles à 37 m du centre). Pareil pour les poteaux de barrière (rayon 9 m) en contre-plongée : vérifie sur la planche.
 - Les voitures qui arrivent de loin ne sont pas encore dans le plan au moment du mot : fais-les partir à ±45 m, avec ~0,6 s d'avance sur le mot.
+- Une caméra placée **dans** un véhicule ou un bâtiment ne voit que du vide (écran bleu nuit) : le contrôle qualité le détecte comme « images noires ». Filme l'objet de l'extérieur.
+- Pour corriger un seul plan après le rendu : supprime les tranches concernées dans `raw.mp4.parts/` (une tranche = 5 s = 150 images, par ex. `c001500_1650.mp4` couvre 50-55 s), puis relance la même commande. Seules ces tranches sont recalculées.
 - Les sous-titres de `main.js` retirent la ponctuation finale. `bigWords` grossit 3 à 5 mots-clés, pas plus.
 - La « seconde de silence » de l'histoire doit être un vrai silence dans la musique (`musicLevel` = 0). Garde la pluie ou l'ambiance pour que ça ne sonne pas comme une coupure.
 - `soundtrack.py` ne peut pas être écouté ici. Mesure le niveau RMS de chaque piste (`--stems`) passage par passage. Cibles validées sur l'épisode modèle :

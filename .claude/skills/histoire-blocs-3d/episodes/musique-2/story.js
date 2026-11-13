@@ -204,7 +204,7 @@ export default async function story({ kit, THREE, scene, camera, renderer, at })
     { t: T.dying - 0.05, cam: () => { const b = BATT; return { pos: [b.x - 0.18, b.y + 0.1, b.z - 0.9], look: [b.x, b.y, b.z], fov: 32 }; } },
     { t: T.smash2 - 0.35, cam: () => ({ pos: [WIN.x + 1.3, 1.5, WIN.z + 1.6], look: [WIN.x, 1.6, WIN.z - 0.9], fov: 48 }) },
     { t: T.climbed, cam: () => ({ pos: [WIN.x - 0.3, 1.9, WIN.z + 0.6], look: [WIN.x - 0.4, 1.4, WIN.z - 1.8], fov: 50 }) },
-    { t: T.nothing - 0.05, cam: () => { const p = kit.wpos(truck.group, [0.3, 1.8, 3.4]); const l = kit.wpos(truck.group, [0.3, 1.5, 1.5]); return { pos: p.toArray(), look: l.toArray(), fov: 44 }; } },
+    { t: T.nothing - 0.05, cam: (u) => ({ pos: [TRUCK0.x - lerp(8, 7.2, u), 1.0, TRUCK0.z - 0.6], look: [TRUCK0.x - 2, 1.5, TRUCK0.z], fov: 48 }) },
     { t: T.again - 0.05, cam: () => ({ pos: [WIN.x + 0.5, 1.7, WIN.z + 1.0], look: [WIN.x - 0.4, 1.4, WIN.z - 1.5], fov: 40 }) },
     { t: T.roared - 0.1, cam: () => ({ pos: [TRUCK0.x - 8, 0.8, TRUCK0.z - 1.5], look: [TRUCK0.x - 2, 1.4, TRUCK0.z], fov: 50 }) },
     { t: T.blasting, cam: glide([TRUCK0.x - 1.5, 3.6, TRUCK0.z + 3.2], [TRUCK0.x - 1.5, 4.4, TRUCK0.z + 2.4], [TRUCK0.x, 3.2, TRUCK0.z], [TRUCK0.x, 3.6, TRUCK0.z], 44, 38) },
