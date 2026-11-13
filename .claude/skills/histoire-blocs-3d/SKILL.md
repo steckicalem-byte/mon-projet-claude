@@ -128,7 +128,14 @@ Une 3D « plate » est rejetée. Le look attendu est celui d'une capture de jeu 
 - Les voitures qui arrivent de loin ne sont pas encore dans le plan au moment du mot : fais-les partir à ±45 m, avec ~0,6 s d'avance sur le mot.
 - Les sous-titres de `main.js` retirent la ponctuation finale. `bigWords` grossit 3 à 5 mots-clés, pas plus.
 - La « seconde de silence » de l'histoire doit être un vrai silence dans la musique (`musicLevel` = 0). Garde la pluie ou l'ambiance pour que ça ne sonne pas comme une coupure.
-- `soundtrack.py` ne peut pas être écouté ici. Vérifie les niveaux par seconde de chaque piste (`--stems`) et assure-toi que la musique est à -180 dB pendant le silence.
+- `soundtrack.py` ne peut pas être écouté ici. Mesure le niveau RMS de chaque piste (`--stems`) passage par passage. Cibles validées sur l'épisode modèle :
+  - **voix** ≈ -25 dB, avec le niveleur intégré qui remonte les chuchotements jusqu'à +10 dB ;
+  - **musique** ≥ 6 dB sous la voix, et -180 dB pendant le silence ;
+  - **pluie et ambiance** ≥ 4 dB sous le passage le plus faible de la voix ;
+  - **sirènes et grognements** ≥ 5 dB sous la voix. Seuls les impacts (explosion, tonnerre) peuvent la dépasser un instant.
+
+  Les gains par défaut (`--music-db -14`, `--sfx-db -8`) et ceux de `sfx.json` respectent déjà ces cibles.
+- La réplique finale chuchotée est le moment clé : rien ne doit la couvrir (drone ≤ -20, grognement ≤ -16).
 
 ## Variantes faciles
 - Autre règle : lumière, bruit, regard, chaleur, pluie… Garde les tours du dispositif, change l'équipement (projecteurs au lieu d'enceintes : `speakerTower` a déjà un projecteur et un cône de lumière).

@@ -20,8 +20,8 @@ SR = 48000
 ap = argparse.ArgumentParser()
 ap.add_argument('cues'); ap.add_argument('sfx'); ap.add_argument('out')
 ap.add_argument('--voice'); ap.add_argument('--stems')
-ap.add_argument('--music-db', type=float, default=-9.0)
-ap.add_argument('--sfx-db', type=float, default=-4.0)
+ap.add_argument('--music-db', type=float, default=-14.0)
+ap.add_argument('--sfx-db', type=float, default=-8.0)
 A = ap.parse_args()
 C = json.load(open(A.cues))
 EV = json.load(open(A.sfx))
@@ -159,7 +159,7 @@ amb += city
 if rain_on:
     a, b = rain_on
     rk = np.clip((tt - a) / 1.5, 0, 1) * np.clip((b - tt) / 1.0, 0, 1)
-    rainx = bp(noise(N), 1200, 9000) * 0.25 + lp(noise(N), 600) * 0.12
+    rainx = bp(noise(N), 1200, 9000) * 0.15 + lp(noise(N), 600) * 0.075
     drops = hp(noise(N), 3000) * (rng.random(N) < 0.0015) * 1.2
     amb += (rainx + drops) * rk
 
@@ -208,13 +208,19 @@ if A.voice:
     v, sr = sf.read(A.voice, always_2d=True); v = v.mean(axis=1)
     if sr != SR: v = signal.resample_poly(v, SR, sr)
     v = v / (np.abs(v).max() + 1e-9) * 0.9
+    # niveleur doux : remonte les passages chuchotés (jusqu'à +10 dB) sans toucher aux passages forts
+    e = np.sqrt(np.convolve(v ** 2, np.ones(int(0.25 * SR)) / int(0.25 * SR), 'same')) + 1e-6
+    ref = np.percentile(e[e > 0.01], 75)
+    g = np.clip((ref / e) ** 0.6, 1.0, 3.2); g[e < 0.004] = 1.0
+    g = signal.lfilter([0.0005], [1, -0.9995], np.r_[np.full(1, g[0]), g])[1:] / 1.0
+    v = np.tanh(v * g * 1.05) * 0.92
     voice[:min(N, len(v))] = v[:N]
 venv = np.sqrt(np.convolve(voice ** 2, np.ones(2400) / 2400, 'same'))
 venv = signal.lfilter([0.002], [1, -0.998], venv) * 8
 duck = 1 - 0.55 * np.clip(venv, 0, 1)
 
 M = mix_m * db(A.music_db) * duck
-AMB = amb * db(-6) * (1 - 0.3 * np.clip(venv, 0, 1))
+AMB = amb * db(-12) * (1 - 0.3 * np.clip(venv, 0, 1))
 S2 = sfx * db(A.sfx_db)
 out = np.stack([voice, voice], 1) + np.stack([M, M], 1) + np.stack([AMB, AMB], 1) + S2
 out = np.tanh(out)  # écrêtage doux ; le niveau final (-14 LUFS) est fait par ffmpeg loudnorm au mux
