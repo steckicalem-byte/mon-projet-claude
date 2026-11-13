@@ -1,27 +1,155 @@
 [
- {"t": 0, "type": "stinger", "gain": -4},
- {"t": "nobody", "type": "drone", "d": 14, "gain": -16},
- {"t": "crawled", "type": "creak", "d": 1.6, "gain": -16},
- {"t": "ran", "dt": -0.1, "type": "whoosh", "gain": -8},
- {"t": "jumped", "type": "whoosh", "gain": -9},
- {"t": "jumped", "dt": 0.55, "type": "blip", "gain": -16},
- {"t": "slid", "type": "whoosh", "gain": -7},
- {"t": "lightning", "dt": -0.05, "type": "thunder", "gain": 1},
- {"t": "lightning", "dt": 0.05, "type": "sparks", "gain": -6},
- {"t": "falling", "dt": -0.2, "type": "creak", "d": 2.6, "gain": -4},
- {"t": "dove", "type": "whoosh", "gain": -7},
- {"t": "smashed", "dt": -0.05, "type": "boom", "gain": 3},
- {"t": "smashed", "dt": 0.1, "type": "sparks", "gain": -4, "pan": -0.3},
- {"t": "sparks", "type": "sparks", "gain": -6, "pan": 0.3},
- {"t": "locked", "type": "blip", "gain": -14},
- {"t": "smash2", "dt": -0.02, "type": "sparks", "gain": -3},
- {"t": "smash2", "dt": -0.02, "type": "crackle", "gain": -6},
- {"t": "nothing", "dt": -0.3, "type": "powerdown", "gain": -10},
- {"t": "roared", "dt": -0.1, "type": "growl", "d": 1.6, "gain": -6},
- {"t": "roared", "dt": -0.1, "type": "boom", "gain": -10},
- {"t": "died", "dt": -0.15, "type": "blip", "gain": -8},
- {"t": "drove", "type": "growl", "d": 4, "gain": -12},
- {"t": "ended", "dt": 0.3, "type": "drone", "d": 9, "gain": -14},
- {"t": "headTurn", "type": "creak", "d": 2.8, "gain": -4},
- {"t": "end", "dt": 0.3, "type": "stinger", "gain": -2}
+ {
+  "t": 0,
+  "type": "rain"
+ },
+ {
+  "t": 0,
+  "type": "stinger",
+  "gain": -4
+ },
+ {
+  "t": "nobody",
+  "type": "drone",
+  "d": 14,
+  "gain": -16
+ },
+ {
+  "t": "crawled",
+  "type": "creak",
+  "d": 1.6,
+  "gain": -16
+ },
+ {
+  "t": "ran",
+  "dt": -0.1,
+  "type": "whoosh",
+  "gain": -8
+ },
+ {
+  "t": "jumped",
+  "type": "whoosh",
+  "gain": -9
+ },
+ {
+  "t": "jumped",
+  "dt": 0.55,
+  "type": "blip",
+  "gain": -16
+ },
+ {
+  "t": "slid",
+  "type": "whoosh",
+  "gain": -7
+ },
+ {
+  "t": "lightning",
+  "dt": -0.05,
+  "type": "thunder",
+  "gain": 1
+ },
+ {
+  "t": "lightning",
+  "dt": 0.05,
+  "type": "sparks",
+  "gain": -6
+ },
+ {
+  "t": "falling",
+  "dt": -0.2,
+  "type": "creak",
+  "d": 2.6,
+  "gain": -4
+ },
+ {
+  "t": "dove",
+  "type": "whoosh",
+  "gain": -7
+ },
+ {
+  "t": "smashed",
+  "dt": -0.05,
+  "type": "boom",
+  "gain": 3
+ },
+ {
+  "t": "smashed",
+  "dt": 0.1,
+  "type": "sparks",
+  "gain": -4,
+  "pan": -0.3
+ },
+ {
+  "t": "sparks",
+  "type": "sparks",
+  "gain": -6,
+  "pan": 0.3
+ },
+ {
+  "t": "locked",
+  "type": "blip",
+  "gain": -14
+ },
+ {
+  "t": "smash2",
+  "dt": -0.02,
+  "type": "sparks",
+  "gain": -3
+ },
+ {
+  "t": "smash2",
+  "dt": -0.02,
+  "type": "crackle",
+  "gain": -6
+ },
+ {
+  "t": "nothing",
+  "dt": -0.3,
+  "type": "powerdown",
+  "gain": -10
+ },
+ {
+  "t": "roared",
+  "dt": -0.1,
+  "type": "growl",
+  "d": 1.6,
+  "gain": -6
+ },
+ {
+  "t": "roared",
+  "dt": -0.1,
+  "type": "boom",
+  "gain": -10
+ },
+ {
+  "t": "died",
+  "dt": -0.15,
+  "type": "blip",
+  "gain": -8
+ },
+ {
+  "t": "drove",
+  "type": "growl",
+  "d": 4,
+  "gain": -12
+ },
+ {
+  "t": "ended",
+  "dt": 0.3,
+  "type": "drone",
+  "d": 9,
+  "gain": -18
+ },
+ {
+  "t": "headTurn",
+  "type": "creak",
+  "d": 2.8,
+  "gain": -4
+ },
+ {
+  "t": "end",
+  "dt": 0.3,
+  "type": "stinger",
+  "gain": -2
+ }
 ]
