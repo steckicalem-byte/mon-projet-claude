@@ -1,0 +1,252 @@
+[
+ {
+  "t": 0,
+  "type": "stinger",
+  "gain": -2
+ },
+ {
+  "t": "flashback",
+  "dt": -0.3,
+  "type": "whoosh",
+  "gain": -6
+ },
+ {
+  "t": "appeared",
+  "type": "growl",
+  "d": 2.5,
+  "gain": -4
+ },
+ {
+  "t": "appeared",
+  "dt": 0.6,
+  "type": "crowd",
+  "d": 3,
+  "gain": -8
+ },
+ {
+  "t": "disappeared",
+  "type": "stinger",
+  "gain": -3
+ },
+ {
+  "t": "froze",
+  "type": "blip",
+  "gain": -10
+ },
+ {
+  "t": "present",
+  "dt": -0.3,
+  "type": "whoosh",
+  "gain": -6
+ },
+ {
+  "t": "until",
+  "type": "drone",
+  "d": 7,
+  "gain": -8
+ },
+ {
+  "t": "explode",
+  "dt": -0.05,
+  "type": "boom",
+  "gain": 2
+ },
+ {
+  "t": "explode",
+  "dt": 0.1,
+  "type": "sparks",
+  "gain": -6,
+  "pan": 0.4
+ },
+ {
+  "t": "radio",
+  "type": "crackle",
+  "gain": -4
+ },
+ {
+  "t": "radio",
+  "dt": 0.7,
+  "type": "crackle",
+  "gain": -8
+ },
+ {
+  "t": "failing",
+  "type": "powerdown",
+  "gain": -6
+ },
+ {
+  "t": "oneByOne",
+  "lerp": [
+   "silentTowers",
+   0.0
+  ],
+  "dt": 0.3,
+  "type": "powerdown",
+  "gain": -4,
+  "pan": -0.5
+ },
+ {
+  "t": "oneByOne",
+  "lerp": [
+   "silentTowers",
+   0.25
+  ],
+  "dt": 0.3,
+  "type": "powerdown",
+  "gain": -4,
+  "pan": 0.5
+ },
+ {
+  "t": "oneByOne",
+  "lerp": [
+   "silentTowers",
+   0.5
+  ],
+  "dt": 0.3,
+  "type": "powerdown",
+  "gain": -4,
+  "pan": -0.3
+ },
+ {
+  "t": "oneByOne",
+  "lerp": [
+   "silentTowers",
+   0.75
+  ],
+  "dt": 0.3,
+  "type": "powerdown",
+  "gain": -4,
+  "pan": 0.3
+ },
+ {
+  "t": "oneByOne",
+  "lerp": [
+   "silentTowers",
+   1.0
+  ],
+  "dt": 0.3,
+  "type": "powerdown",
+  "gain": -3
+ },
+ {
+  "t": "silentTowers",
+  "dt": 0.6,
+  "type": "drone",
+  "d": 5,
+  "gain": -10
+ },
+ {
+  "t": "police",
+  "dt": -0.4,
+  "type": "siren",
+  "d": 9.5,
+  "gain": -15,
+  "pan": -0.4
+ },
+ {
+  "t": "police",
+  "dt": 0.3,
+  "type": "siren",
+  "d": 9.0,
+  "gain": -17,
+  "pan": 0.5
+ },
+ {
+  "t": "thunder",
+  "dt": -0.05,
+  "type": "thunder",
+  "gain": 0
+ },
+ {
+  "t": "rain",
+  "dt": -0.3,
+  "type": "rain"
+ },
+ {
+  "t": "closed",
+  "type": "whoosh",
+  "gain": -12
+ },
+ {
+  "t": "sirensDied",
+  "type": "powerdown",
+  "gain": -8,
+  "pan": -0.4
+ },
+ {
+  "t": "shorting",
+  "type": "sparks",
+  "gain": -6,
+  "pan": 0.3
+ },
+ {
+  "t": "shorting",
+  "dt": 0.55,
+  "type": "sparks",
+  "gain": -7,
+  "pan": -0.4
+ },
+ {
+  "t": "shorting",
+  "dt": 1.1,
+  "type": "sparks",
+  "gain": -7,
+  "pan": 0.1
+ },
+ {
+  "t": "shorting",
+  "dt": 1.65,
+  "type": "sparks",
+  "gain": -8,
+  "pan": -0.2
+ },
+ {
+  "t": "died",
+  "dt": -0.2,
+  "type": "blip",
+  "gain": -6
+ },
+ {
+  "t": "creaking",
+  "type": "creak",
+  "d": 2.8,
+  "gain": -2
+ },
+ {
+  "t": "turned",
+  "dt": 0.4,
+  "type": "blip",
+  "gain": -12
+ },
+ {
+  "t": "behind",
+  "dt": -0.05,
+  "type": "stinger",
+  "gain": -8
+ },
+ {
+  "t": "behind",
+  "dt": 0.2,
+  "type": "growl",
+  "d": 3.2,
+  "gain": -16
+ },
+ {
+  "t": "hand",
+  "type": "creak",
+  "d": 1.6,
+  "gain": -14
+ },
+ {
+  "t": "whisper",
+  "type": "drone",
+  "d": 5,
+  "gain": -20
+ },
+ {
+  "t": "end",
+  "dt": 0.2,
+  "type": "stinger",
+  "gain": -4
+ }
+]
