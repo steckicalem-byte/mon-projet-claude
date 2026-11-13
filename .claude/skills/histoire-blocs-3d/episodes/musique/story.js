@@ -1,6 +1,6 @@
 // Épisode « La musique ne doit jamais s'arrêter » — plan de tournage.
 // Tous les temps viennent de words.json via at('mot', occurrence). Changer la voix = re-caler automatiquement.
-export default async function story({ kit, THREE, scene, camera, at }) {
+export default async function story({ kit, THREE, scene, camera, renderer, at }) {
   const { V, ramp, smooth, clamp, lerp, glide, push, orbit, kick, pose, follow } = kit;
 
   // ---------- repères du récit ----------
@@ -33,8 +33,8 @@ export default async function story({ kit, THREE, scene, camera, at }) {
   const boom = kit.burst(scene, towerHead(0), { n: 220, size: 0.35, seed: 11 });
 
   // personnages
-  const dad = kit.makeChar({ shirt: '#22305a', pants: '#1a2138', hat: 'police', hatColor: '#1c2748', badge: true, walkie: true, belt: true, skin: '#d9a477', expr: 'smirk', shoes: '#111' });
-  const kid = kit.makeChar({ shirt: '#3bb36a', hoodie: '#eef5ef', pants: '#2a3a66', hair: '#4a2c1a', hairStyle: 'fluffy', skin: '#f0c49b', expr: 'neutral', shoes: '#f2f2f2' });
+  const dad = kit.makeChar({ shirt: '#22305a', pants: '#1a2138', hat: 'police', hatColor: '#1c2748', badge: true, walkie: true, belt: true, skin: '#d9a477', expr: 'smirk', shoes: '#111', uniform: true });
+  const kid = kit.makeChar({ shirt: '#3bb36a', hoodie: '#eef5ef', pants: '#2a3a66', hair: '#4a2c1a', hairStyle: 'fluffy', skin: '#f0c49b', expr: 'neutral', shoes: '#f2f2f2', hood: true });
   const DAD = V(2.4, 0, 13.4), KID = V(4.0, 0, 13.9);
   dad.root.position.copy(DAD); kid.root.position.copy(KID); scene.add(dad.root, kid.root);
   const dadBox = kit.boombox('#30343f'); dadBox.rotation.x = -Math.PI / 2; dadBox.position.set(0, -0.02, 0.12);
@@ -67,7 +67,7 @@ export default async function story({ kit, THREE, scene, camera, at }) {
     const a = (i / 12) * Math.PI * 2 + 0.26;
     const p = V(Math.cos(a) * 12, 0, Math.sin(a) * 12);
     if (p.distanceTo(DAD) < 3 || p.distanceTo(KID) < 3) continue;
-    const g = kit.makeChar({ shirt: SHIRTS[i % 3], pants: '#171c2c', hat: 'police', badge: true, belt: true, skin: ['#f0c49b', '#c98d5e', '#8d5a3b'][i % 3], expr: i % 2 ? 'neutral' : 'angry' });
+    const g = kit.makeChar({ shirt: SHIRTS[i % 3], pants: '#171c2c', hat: 'police', badge: true, belt: true, skin: ['#f0c49b', '#c98d5e', '#8d5a3b'][i % 3], expr: i % 2 ? 'neutral' : 'angry', uniform: true, walkie: i % 3 === 0 });
     g.root.position.copy(p); g.root.rotation.y = Math.atan2(-p.x, -p.z);
     const b = kit.boombox(['#2c2f3a', '#3a2c2c', '#2c3a33'][i % 3]); b.rotation.x = -Math.PI / 2; b.position.set(0, -0.02, 0.12);
     g.arms[1].userData.hand.add(b);
@@ -149,7 +149,7 @@ export default async function story({ kit, THREE, scene, camera, at }) {
     // éclair
     const lt = t - T.thunder; const fl = lt >= 0 && lt < 0.6 ? (lt < 0.08 ? 1 : lt > 0.2 && lt < 0.3 ? 0.7 : 0) : 0;
     sky.uniforms.flash.value = fl * 0.8; lightning.intensity = fl * 6; if (fl) sky.hemi.intensity += fl * 3;
-    town.ground.material.roughness = lerp(0.9, 0.28, rainK); town.ground.material.color.set(rainK > 0.5 ? '#30343f' : '#3a3e4b');
+    town.setWet(rainK, renderer, scene); town.antennas.forEach((a, i) => { a.material.opacity = (Math.floor(t * 1.2 + i * 0.37) % 2) ? 0.95 : 0.15; });
     // fenêtres
     let wl = day ? 0 : 1;
     if (t >= T.windows) wl = 1 + 0.8 * ramp(t, T.windows, T.windows + 1.2);
@@ -277,7 +277,7 @@ export default async function story({ kit, THREE, scene, camera, at }) {
     { t: T.oneByOne, cam: orbit([0, 0, 0], 34, 0.9, 1.5, 22, 55, 6) },
     { t: T.scream - 0.1, cam: cam(DAD.clone().addScaledVector(FWD, 2.3).add(V(0, 1.3, 0)).toArray(), [DAD.x, 1.7, DAD.z], 44, 0.2) },
     // tout le monde fait du bruit
-    { t: T.police, cam: glide([6, 30, 36], [5, 27, 34], [0, 0, 22], [0, 0, 21], 55, 52) },
+    { t: T.police, cam: (u) => { const c = kit.wpos(cars[0].car.group); return { pos: [-2.5, 1.1, 26.6], look: [c.x, 0.9, c.z], fov: 52 }; } },
     { t: at('sirens', 1), cam: follow(cars[0].car.group, [3.5, 1.6, -4.2], [0, 1.2, 0], 44, 0.1) },
     { t: at('people', 2), cam: glide([12, 3, -12], [12, 5, -15], [14, 10, -36.7], [14, 14, -36.7], 50, 46) },
     { t: at('their', 2), cam: cam([12, 8, -28], [18, 14, -36.5], 42, 0.12) },

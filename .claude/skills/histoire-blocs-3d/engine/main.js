@@ -1,6 +1,11 @@
 // Exécuté dans Chromium. Charge l'épisode (story.js + words.json) et expose window.renderFrame(f).
 import * as THREE from 'three';
 import * as kit from './kit.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 const q = new URLSearchParams(location.search);
 const W = +q.get('w') || 1080, H = +q.get('h') || 1920, FPS = +q.get('fps') || 30;
@@ -22,6 +27,22 @@ try {
   // lumière d'appoint attachée à la caméra : les visages restent lisibles quel que soit l'angle
   const fill = new THREE.DirectionalLight('#dfe6ff', 0.9); fill.position.set(0.6, 0.6, 0); fill.target.position.set(0, 0, -1);
   camera.add(fill); camera.add(fill.target); scene.add(camera);
+
+  // post-traitement : halo (bloom) sur les lumières, puis étalonnage + vignettage
+  const composer = new EffectComposer(renderer);
+  composer.setPixelRatio(1); composer.setSize(W, H);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.5, 0.45, 0.92);
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
+  const grade = new ShaderPass({
+    uniforms: { tDiffuse: { value: null }, vig: { value: 0.32 }, sat: { value: 1.12 }, lift: { value: new THREE.Vector3(0.012, 0.016, 0.03) } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float vig, sat; uniform vec3 lift; varying vec2 vUv;
+      void main(){ vec3 c=texture2D(tDiffuse,vUv).rgb; float l=dot(c,vec3(.299,.587,.114)); c=mix(vec3(l),c,sat);
+        c=c+lift*(1.-c); vec2 d=vUv-.5; d.x*=0.75; c*=1.-vig*smoothstep(.25,.85,length(d)*1.4); gl_FragColor=vec4(c,1.); }`,
+  });
+  composer.addPass(grade);
 
   const words = await (await fetch('/ep/words.json')).json();
   const norm = (s) => s.toLowerCase().replace(/[^a-z0-9':]/g, '');
@@ -62,7 +83,8 @@ try {
     camera.fov = c.fov || 45; camera.updateProjectionMatrix();
     camera.updateMatrixWorld(true);
     if (S.late) S.late(t, camera);
-    renderer.render(scene, camera);
+    if (S.post) S.post(t, { bloom, grade });
+    composer.render();
     ctx.drawImage(renderer.domElement, 0, 0);
     if (S.overlay) S.overlay(ctx, t, W, H);
     // sous-titre : le dernier mot commencé, tenu jusqu'au mot suivant (max 0,7 s après sa fin)

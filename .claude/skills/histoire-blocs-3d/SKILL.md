@@ -108,6 +108,18 @@ Ensuite :
 - donne le lien ElevenLabs de la voix ;
 - propose une partie 2, puisque le cliffhanger est fait pour ça.
 
+## Le look (réglé d'après les retours de l'utilisateur)
+Une 3D « plate » est rejetée. Le look attendu est celui d'une capture de jeu de blocs moderne. Ces réglages sont déjà dans le kit, ne les dégrade pas :
+- **Halo (bloom)** sur toutes les sources de lumière : `UnrealBloomPass(0.5, 0.45, 0.92)` dans `main.js`, puis étalonnage (saturation 1,12, noirs légèrement relevés, vignettage).
+  - Trop fort, ça voile tout en blanc. Si une image est laiteuse, regarde d'abord les faisceaux (`lightCone`, opacité ≤ 0,07) et la taille des halos (`glow`).
+- **Personnages** : blocs aux arêtes arrondies (`rbox`, `RoundedBoxGeometry`), tête plus arrondie que le corps.
+  - Vêtements dessinés : `uniform: true` (col, boutons, poches, badge, ceinture), `hoodie: '<couleur des bandes>'` (fermeture, cordons, poche), `walkie`, `hood`.
+  - Yeux noirs avec reflet blanc, sourcils épais.
+- **Ville** : 4 anneaux d'immeubles jusqu'à 200 m, feux rouges clignotants sur les toits, corniches, auvents et vitrines éclairées autour de la place.
+- **Pluie** : longues gouttes (0,95 m) et sol mouillé (`town.setWet(k, renderer, scene)` : reflets de la ville capturés une fois, sol lisse et brillant).
+- Les projecteurs des tours sont à 450 (au-delà, le monstre est « cramé » en blanc). Le faisceau s'efface quand la caméra est dedans.
+- Évite les vues aériennes pour montrer un objet précis (voiture, personne) : en 9:16 il disparaît. Préfère un plan bas qui suit l'objet.
+
 ## Leçons apprises (à respecter)
 - **En 9:16, le champ horizontal est minuscule.** À fov 42 vertical, l'horizontal ne fait que ~24°. Cadre toujours le sujet au centre ; un sujet décalé de 15° sort du cadre. Pour un sujet qui bouge, utilise `follow` ou une caméra calculée à partir de sa position.
 - **Objets tenus en main en gros plan** (horloge, radio, batterie) : ne les attache pas à la main. Pose une copie dans le monde, devant le personnage et face caméra (inserts `PHONE`, `RADIO`, `BATT` de l'épisode modèle). La référence triche pareil.
